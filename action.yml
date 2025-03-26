@@ -8,6 +8,9 @@ inputs:
   github-issue-number:
     description: 'GitHub issue number where progress updates will be posted'
     required: true
+  github-username:
+    description: 'GitHub username of the user for whom the workspace is being started'
+    required: true
   coder-url:
     description: 'Coder URL'
     required: true
@@ -44,16 +47,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          let githubUsername = '';
-          
-          if (context.eventName === 'issues' && context.payload.action === 'opened') {
-            // For new issues, check the issue body
-            githubUsername = context.payload.issue.user.login;
-          } 
-          else if (context.eventName === 'issue_comment' && context.payload.action === 'created') {
-            // For comments, check the comment body
-            githubUsername = context.payload.comment.user.login;
-          }
+          const githubUsername = '${{ inputs.github-username }}';
           
           // Parse YAML mapping manually
           const fs = require('fs');
