@@ -89,7 +89,6 @@ runs:
           const command = `coder users list --url '${process.env.CODER_URL}' --token '${process.env.CODER_TOKEN}' --github-user-id '${process.env.GITHUB_USER_ID}' --column username`;
           const listOutput = execSync(command).toString().trim();
 
-          const listOutput = (process.env.LIST_OUTPUT ?? '').trim()
           const lines = listOutput.split('\n')
           if (lines.length < 2) {
             console.log('No Coder username mapping found for GitHub user')
