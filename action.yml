@@ -124,7 +124,7 @@ runs:
           const githubUsername = '${{ steps.github-user.outputs.github_username }}';
           const externalAuthPage = '${{ inputs.coder-url }}/external-auth';
           const errMsg = `No matching Coder user found for GitHub user \`${githubUsername}\`. Please connect your GitHub account with Coder: ${externalAuthPage}`;
-          fs.appendFileSync(process.env["GITHUB_ENV"], `ERROR_MSG="${errMsg}"\n`);
+          require('fs').appendFileSync(process.env["GITHUB_ENV"], `ERROR_MSG="${errMsg}"\n`);
           core.setFailed(errMsg)
 
     - name: Create parameters file
