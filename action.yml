@@ -5,10 +5,6 @@ inputs:
     description: 'GitHub token'
     required: true
     default: ${{ github.token }}
-  trigger-phrase:
-    description: 'Phrase that triggers a response'
-    required: false
-    default: '@coder'
   coder-url:
     description: 'Coder URL'
     required: true
@@ -45,18 +41,14 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          let shouldComment = false;
           let githubUsername = '';
-          const triggerPhrase = '${{ inputs.trigger-phrase }}';
           
           if (context.eventName === 'issues' && context.payload.action === 'opened') {
             // For new issues, check the issue body
-            shouldComment = context.payload.issue.body && context.payload.issue.body.includes(triggerPhrase);
             githubUsername = context.payload.issue.user.login;
           } 
           else if (context.eventName === 'issue_comment' && context.payload.action === 'created') {
             // For comments, check the comment body
-            shouldComment = context.payload.comment.body && context.payload.comment.body.includes(triggerPhrase);
             githubUsername = context.payload.comment.user.login;
           }
           
@@ -83,14 +75,12 @@ runs:
           const hasMapping = !!coderUsername;
           
           // Set individual outputs for simpler conditions
-          core.setOutput('triggered', shouldComment.toString());
-          core.setOutput('has_mapping', (shouldComment && hasMapping).toString());
-          core.setOutput('no_mapping', (shouldComment && !hasMapping).toString());
+          core.setOutput('has_mapping', hasMapping.toString());
+          core.setOutput('no_mapping', (!hasMapping).toString());
           core.setOutput('github_username', githubUsername);
           core.setOutput('coder_username', coderUsername);
           
           return {
-            shouldComment,
             githubUsername,
             coderUsername,
             hasMapping
