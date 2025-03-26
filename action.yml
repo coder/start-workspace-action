@@ -122,13 +122,10 @@ runs:
         script: |
           const issueNumber = Number('${{ inputs.github-issue-number }}');
           const githubUsername = '${{ steps.github-user.outputs.github_username }}';
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issueNumber,
-            body: `❌ No Coder username mapping found for GitHub user \`${githubUsername}\`. Please add a mapping for this user and try again.`
-          });
-          core.setFailed('No Coder username mapping found for GitHub user')
+          const externalAuthPage = '${{ inputs.coder-url }}/external-auth';
+          const errMsg = `No matching Coder user found for GitHub user \`${githubUsername}\`. Please connect your GitHub account with Coder: ${externalAuthPage}`;
+          fs.appendFileSync(process.env["GITHUB_ENV"], `ERROR_MSG="${errMsg}"\n`);
+          core.setFailed(errMsg)
 
     - name: Create parameters file
       shell: bash
@@ -175,9 +172,10 @@ runs:
         script: |
           const issueNumber = Number('${{ inputs.github-issue-number }}');
           const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const errorMsg = process.env["ERROR_MSG"];
           await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issueNumber,
-            body: `❌ Failed to start workspace. Please check the [action logs](${runUrl}) for details.`
+            body: "❌ " + (errorMsg ?? `Failed to start workspace. Please check the [action logs](${runUrl}) for details.`)
           });
