@@ -26,83 +26,11 @@ inputs:
   parameters:
     description: 'YAML dictionary of parameters for the Coder workspace'
     required: true
-  user-mapping:
-    description: 'YAML mapping of GitHub usernames to Coder usernames'
-    required: false
-    default: '{}'
 
 runs:
   using: 'composite'
   steps:
-    - name: Create user mapping file
-      shell: bash
-      run: |
-        mkdir -p /tmp/coder
-        echo '${{ inputs.user-mapping }}' > /tmp/coder/user-mapping.yml
-        echo "USER_MAPPING_FILE=/tmp/coder/user-mapping.yml" >> $GITHUB_ENV
-
-    - name: Get Coder username
-      id: check
-      uses: actions/github-script@v6
-      env:
-        GITHUB_USERNAME: ${{ inputs.github-username }}
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const githubUsername = (process.env.GITHUB_USERNAME ?? '').trim();
-          
-          // Parse YAML mapping manually
-          const fs = require('fs');
-          const mappingContent = fs.readFileSync(process.env.USER_MAPPING_FILE, 'utf8');
-          
-          // Simple manual parsing of key-value pairs from YAML content
-          const userMapping = {};
-          mappingContent.split('\n').forEach(line => {
-            // Skip empty lines or comments
-            if (!line.trim() || line.trim().startsWith('#')) return;
-            
-            // Parse key: value format
-            const match = line.match(/^([^:]+):\s*(.+)$/);
-            if (match) {
-              const key = match[1].trim();
-              const value = match[2].trim();
-              userMapping[key] = value;
-            }
-          });
-          
-          const coderUsername = userMapping[githubUsername] || '';
-          const hasMapping = !!coderUsername;
-          
-          // Set individual outputs for simpler conditions
-          core.setOutput('has_mapping', hasMapping.toString());
-          core.setOutput('no_mapping', (!hasMapping).toString());
-          core.setOutput('github_username', githubUsername);
-          core.setOutput('coder_username', coderUsername);
-          
-          return {
-            githubUsername,
-            coderUsername,
-            hasMapping
-          };
-        result-encoding: json
-    
-    - name: No user mapping comment
-      if: steps.check.outputs.no_mapping == 'true'
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const issueNumber = Number('${{ inputs.github-issue-number }}');
-          const githubUsername = '${{ steps.check.outputs.github_username }}';
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issueNumber,
-            body: `❌ No Coder username mapping found for GitHub user \`${githubUsername}\`. Please add a mapping for this user and try again.`
-          });
-          
     - name: Initial comment
-      if: steps.check.outputs.has_mapping == 'true'
       uses: actions/github-script@v6
       with:
         github-token: ${{ inputs.github-token }}
@@ -115,9 +43,8 @@ runs:
             issue_number: issueNumber,
             body: `Starting a Coder workspace. You can track the progress [here](${runUrl}).`
           });
-    
+
     - name: Check if Coder CLI is available
-      if: steps.check.outputs.has_mapping == 'true'
       id: check-coder
       shell: bash
       run: |
@@ -130,40 +57,95 @@ runs:
         fi
     
     - name: Install Coder CLI
-      if: steps.check.outputs.has_mapping == 'true' && steps.check-coder.outputs.coder_installed != 'true'
+      if: steps.check-coder.outputs.coder_installed != 'true'
       uses: coder/setup-action@4a607a8113d4e676e2d7c34caa20a814bc88bfda
       with:
         access_url: ${{ inputs.coder-url }}
         coder_session_token: ${{ inputs.coder-token }}
-    
+
+    - name: Get GitHub username and id
+      id: github-user
+      uses: actions/github-script@v6
+      env:
+        GITHUB_USERNAME: ${{ inputs.github-username }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const githubUsername = (process.env.GITHUB_USERNAME ?? '').trim();
+          const githubUser = await github.rest.users.get({
+            username: githubUsername
+          });
+          core.setOutput('github_username', githubUsername);
+          core.setOutput('github_user_id', githubUser.data.id);
+
+    - name: Get Coder Users List
+      id: coder-user-list
+      shell: bash
+      run: |
+        CODER_USERS_LIST_OUTPUT="$(coder users list --url '${{ inputs.coder-url }}' --token '${{ inputs.coder-token }}' --github-user-id '${{ steps.github-user.outputs.github_user_id }}' --column username)"
+        echo "coder_users_list_output=${CODER_USERS_LIST_OUTPUT}" >> $GITHUB_OUTPUT
+
+    - name: Get Coder User
+      id: coder-user
+      uses: actions/github-script@v6
+      env:
+        LIST_OUTPUT: ${{ steps.coder-user-list.outputs.coder_users_list_output }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const listOutput = (process.env.LIST_OUTPUT ?? '').trim()
+          const lines = listOutput.split('\n')
+          if (lines.length < 2) {
+            console.log('No Coder username mapping found for GitHub user')
+            return
+          }
+          if (lines.length > 2) {
+            console.log('Multiple Coder usernames found for GitHub user. Using the first one.')
+          }
+          const coderUsername = lines[1].trim()
+          core.setOutput('coder_username', coderUsername)
+          core.setOutput('has_mapping', String(coderUsername.length > 0))
+
+    - name: No user mapping comment
+      if: steps.coder-user.outputs.has_mapping != 'true'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const issueNumber = Number('${{ inputs.github-issue-number }}');
+          const githubUsername = '${{ steps.github-user.outputs.github_username }}';
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: issueNumber,
+            body: `❌ No Coder username mapping found for GitHub user \`${githubUsername}\`. Please add a mapping for this user and try again.`
+          });
+          core.setFailed('No Coder username mapping found for GitHub user')
+
     - name: Create parameters file
-      if: steps.check.outputs.has_mapping == 'true'
       shell: bash
       run: |
         mkdir -p /tmp/coder
         echo '${{ inputs.parameters }}' > /tmp/coder/parameters.yml
         echo "PARAMETERS_FILE=/tmp/coder/parameters.yml" >> $GITHUB_ENV
-        echo "CODER_USERNAME=${{ steps.check.outputs.coder_username }}" >> $GITHUB_ENV
-    
+
     - name: Start Coder workspace
-      if: steps.check.outputs.has_mapping == 'true'
       id: start-workspace
       shell: bash
-      run: |
-        set -e
-        bash -c "yes '' || true" | coder --url ${{ inputs.coder-url }} --token ${{ inputs.coder-token }} create --yes --template ${{ inputs.template-name }} $CODER_USERNAME/${{ inputs.workspace-name }} --rich-parameter-file $PARAMETERS_FILE
-        WORKSPACE_URL="${{ inputs.coder-url }}/$CODER_USERNAME/${{ inputs.workspace-name }}"
-        echo "workspace_url=${WORKSPACE_URL}" >> $GITHUB_OUTPUT
-        echo "success=true" >> $GITHUB_OUTPUT
       env:
         CODER_URL: ${{ inputs.coder-url }}
         CODER_TOKEN: ${{ inputs.coder-token }}
         TEMPLATE_NAME: ${{ inputs.template-name }}
         WORKSPACE_NAME: ${{ inputs.workspace-name }}
-      continue-on-error: true
-    
+      run: |
+        set -o pipefail
+        set -o errexit
+
+        bash -c "yes '' || true" | coder --url '${{ inputs.coder-url }}' --token '${{ inputs.coder-token }}' create --yes --template '${{ inputs.template-name }}' '${{ inputs.workspace-name }}' --rich-parameter-file $PARAMETERS_FILE
+        WORKSPACE_URL="${{ inputs.coder-url }}/${{ steps.coder-user.outputs.coder_username }}/${{ inputs.workspace-name }}"
+        echo "workspace_url=${WORKSPACE_URL}" >> $GITHUB_OUTPUT
+
     - name: Comment success
-      if: steps.check.outputs.has_mapping == 'true' && steps.start-workspace.outputs.success == 'true'
       uses: actions/github-script@v6
       with:
         github-token: ${{ inputs.github-token }}
@@ -176,11 +158,10 @@ runs:
             issue_number: issueNumber,
             body: `✅ Workspace has been successfully started! You can access it [here](${workspaceUrl}).`
           });
-    
+
     - name: Comment failure
-      if: always() && steps.check.outputs.has_mapping == 'true' && (failure() || cancelled() || steps.start-workspace.outcome != 'success')
+      if: always() && (failure() || cancelled())
       uses: actions/github-script@v6
-      continue-on-error: true
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -192,9 +173,3 @@ runs:
             issue_number: issueNumber,
             body: `❌ Failed to start workspace. Please check the [action logs](${runUrl}) for details.`
           });
-      
-    - name: Fail if workspace creation failed
-      if: steps.check.outputs.has_mapping == 'true' && steps.start-workspace.outcome != 'success'
-      shell: bash
-      run: |
-        exit 1
