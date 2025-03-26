@@ -72,7 +72,7 @@ runs:
         github-token: ${{ inputs.github-token }}
         script: |
           const githubUsername = (process.env.GITHUB_USERNAME ?? '').trim();
-          const githubUser = await github.rest.users.get({
+          const githubUser = await github.rest.users.getByUsername({
             username: githubUsername
           });
           core.setOutput('github_username', githubUsername);
