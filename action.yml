@@ -41,13 +41,15 @@ runs:
         echo '${{ inputs.user-mapping }}' > /tmp/coder/user-mapping.yml
         echo "USER_MAPPING_FILE=/tmp/coder/user-mapping.yml" >> $GITHUB_ENV
 
-    - name: Check for trigger phrase and get user
+    - name: Get Coder username
       id: check
       uses: actions/github-script@v6
+      env:
+        GITHUB_USERNAME: ${{ inputs.github-username }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const githubUsername = '${{ inputs.github-username }}';
+          const githubUsername = (process.env.GITHUB_USERNAME ?? '').trim();
           
           // Parse YAML mapping manually
           const fs = require('fs');
