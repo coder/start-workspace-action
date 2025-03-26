@@ -5,6 +5,9 @@ inputs:
     description: 'GitHub token'
     required: true
     default: ${{ github.token }}
+  github-issue-number:
+    description: 'GitHub issue number where progress updates will be posted'
+    required: true
   coder-url:
     description: 'Coder URL'
     required: true
@@ -93,7 +96,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = context.issue.number;
+          const issueNumber = Number('${{ inputs.github-issue-number }}');
           const githubUsername = '${{ steps.check.outputs.github_username }}';
           await github.rest.issues.createComment({
             owner: context.repo.owner,
@@ -108,7 +111,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = context.issue.number;
+          const issueNumber = Number('${{ inputs.github-issue-number }}');
           const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
           await github.rest.issues.createComment({
             owner: context.repo.owner,
@@ -169,7 +172,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = context.issue.number;
+          const issueNumber = Number('${{ inputs.github-issue-number }}');
           const workspaceUrl = '${{ steps.start-workspace.outputs.workspace_url }}';
           await github.rest.issues.createComment({
             owner: context.repo.owner,
@@ -185,7 +188,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = context.issue.number;
+          const issueNumber = Number('${{ inputs.github-issue-number }}');
           const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
           await github.rest.issues.createComment({
             owner: context.repo.owner,
