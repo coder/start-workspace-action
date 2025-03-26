@@ -78,16 +78,29 @@ runs:
           core.setOutput('github_username', githubUsername);
           core.setOutput('github_user_id', githubUser.data.id);
 
+    - name: Get Coder Users List
+      id: coder-user-list
+      shell: bash
+      run: |
+        {
+          echo "cmd_output<<EOF"
+          coder users list \
+            --url '${{ inputs.coder-url }}' \
+            --token '${{ inputs.coder-token }}' \
+            --github-user-id '${{ steps.github-user.outputs.github_user_id }}' \
+            --column username
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
+
     - name: Get Coder User
       id: coder-user
       uses: actions/github-script@v6
+      env:
+        CODER_USERS_LIST_OUTPUT: ${{ steps.coder-user-list.outputs.cmd_output }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const { execSync } = require('child_process');
-
-          const command = `coder users list --url '${process.env.CODER_URL}' --token '${process.env.CODER_TOKEN}' --github-user-id '${process.env.GITHUB_USER_ID}' --column username`;
-          const listOutput = execSync(command).toString().trim();
+          const listOutput = (process.env.CODER_USERS_LIST_OUTPUT ?? '').trim();
 
           const lines = listOutput.split('\n')
           if (lines.length < 2) {
