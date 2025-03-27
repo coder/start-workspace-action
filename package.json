@@ -8,5 +8,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --target node --bundle --outfile dist/index.js"
   }
 }
