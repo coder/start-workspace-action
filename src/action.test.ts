@@ -5,7 +5,7 @@ import {
   type ActionInput,
   type ExecOutput,
   type Logger,
-} from ".";
+} from "./action";
 import dedent from "dedent";
 import fs from "fs/promises";
 import { unwrap } from "./utils";
@@ -152,7 +152,7 @@ describe("StartWorkspaceAction", () => {
     `)
     ).toThrowError(
       new UserFacingError(
-        "No Coder username mapping found for GitHub user @github-user"
+        "No matching Coder user found for GitHub user @github-user. Please connect your GitHub account with Coder: https://example.com/settings/external-auth"
       )
     );
     expect(logger.logs).toEqual([]);

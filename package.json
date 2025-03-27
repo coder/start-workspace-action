@@ -18,6 +18,7 @@
   "dependencies": {
     "@octokit/rest": "^21.1.1",
     "dedent": "^1.5.3",
+    "zod": "^3.24.2",
     "zx": "^8.4.1"
   }
 }
