@@ -1,6 +1,7 @@
 import assert from "assert";
 import { $ as originalZx } from "zx";
 import { writeFile } from "fs/promises";
+import { Octokit } from "@octokit/rest";
 
 const $ = originalZx({ nothrow: true });
 
@@ -17,13 +18,17 @@ export interface ExecOutput {
 export class UserFacingError extends Error {}
 
 export class StartWorkspaceAction {
+  private readonly octokit: Octokit;
   constructor(
     private readonly logger: Logger,
     private readonly githubUsername: string | undefined,
     private readonly coderUrl: string,
     private readonly coderToken: string,
-    private readonly quietExec: boolean
-  ) {}
+    private readonly quietExec: boolean,
+    githubToken: string
+  ) {
+    this.octokit = new Octokit({ auth: githubToken });
+  }
 
   async exec(
     strings: TemplateStringsArray,
@@ -90,6 +95,10 @@ export class StartWorkspaceAction {
     return tmpFilePath;
   }
 
+  createWorkspaceUrl(coderUsername: string, workspaceName: string): string {
+    return `${this.coderUrl}/${coderUsername}/${workspaceName}`;
+  }
+
   async coderStartWorkspace({
     coderUsername,
     templateName,
@@ -100,11 +109,32 @@ export class StartWorkspaceAction {
     templateName: string;
     workspaceName: string;
     parametersFilePath: string;
-  }) {
+  }): Promise<string> {
     const fullWorkspaceName = `${coderUsername}/${workspaceName}`;
     return (
       await this
         .exec`bash -c "yes '' || true" | coder create --yes --template ${templateName} ${fullWorkspaceName} --rich-parameter-file ${parametersFilePath}`
     ).text();
+  }
+
+  async githubGetUserIdFromUsername(username: string): Promise<number> {
+    const response = await this.octokit.rest.users.getByUsername({
+      username,
+    });
+    return response.data.id;
+  }
+
+  async githubUpdateIssueComment(args: {
+    owner: string;
+    repo: string;
+    commentId: number;
+    comment: string;
+  }) {
+    await this.octokit.rest.issues.updateComment({
+      owner: args.owner,
+      repo: args.repo,
+      comment_id: args.commentId,
+      body: args.comment,
+    });
   }
 }

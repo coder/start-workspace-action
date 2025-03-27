@@ -33,6 +33,7 @@ interface ActionParams {
   exec?: typeof StartWorkspaceAction.prototype.exec;
   dontOverrideExec?: boolean;
   quietExec?: boolean;
+  githubToken?: string;
 }
 
 const newAction = (params?: ActionParams) => {
@@ -42,7 +43,8 @@ const newAction = (params?: ActionParams) => {
       (params?.githubUsernameUndefined ? undefined : "github-user"),
     params?.coderUrl ?? "https://example.com",
     params?.coderToken ?? "coder-token",
-    params?.quietExec ?? true
+    params?.quietExec ?? true,
+    params?.githubToken ?? "github-token"
   );
   if (!params?.dontOverrideExec) {
     action.exec =
