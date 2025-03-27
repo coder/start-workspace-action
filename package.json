@@ -16,6 +16,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "dedent": "^1.5.3"
+    "dedent": "^1.5.3",
+    "zx": "^8.4.1"
   }
 }

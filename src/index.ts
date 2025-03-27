@@ -1,9 +1,17 @@
 import assert from "assert";
+import { $ as originalZx } from "zx";
+import { writeFile } from "fs/promises";
+
+const $ = originalZx({ nothrow: true });
 
 export interface Logger {
   log(message: string): void;
   warn(message: string): void;
   error(message: string): void;
+}
+
+export interface ExecOutput {
+  text(): string;
 }
 
 export class UserFacingError extends Error {}
@@ -13,8 +21,32 @@ export class StartWorkspaceAction {
     private readonly logger: Logger,
     private readonly githubUsername: string | undefined,
     private readonly coderUrl: string,
-    private readonly coderToken: string
+    private readonly coderToken: string,
+    private readonly quietExec: boolean
   ) {}
+
+  async exec(
+    strings: TemplateStringsArray,
+    ...args: unknown[]
+  ): Promise<ExecOutput> {
+    try {
+      const output = await $({
+        env: {
+          ...process.env,
+          CODER_URL: this.coderUrl,
+          CODER_TOKEN: this.coderToken,
+        },
+      })(strings, ...args).quiet(this.quietExec);
+      if (output.exitCode !== 0) {
+        throw new Error(
+          `Failed to execute command: ${strings.join("REDACTED")}`
+        );
+      }
+      return output;
+    } catch (error) {
+      throw new Error(`Failed to execute command: ${strings.join("REDACTED")}`);
+    }
+  }
 
   /**
    * Parse the output of the `coder users list` command.
@@ -42,6 +74,37 @@ export class StartWorkspaceAction {
 
     return username;
   }
-}
 
-export default StartWorkspaceAction;
+  async coderUsersList(githubUserId: number): Promise<string> {
+    return (
+      await this
+        .exec`coder users list --github-user-id ${githubUserId} --column username`
+    ).text();
+  }
+
+  async createParametersFile(parameters: string): Promise<string> {
+    const tmpFilePath = `/tmp/coder-parameters-${Math.round(
+      Math.random() * 1000000
+    )}.yml`;
+    await writeFile(tmpFilePath, parameters);
+    return tmpFilePath;
+  }
+
+  async coderStartWorkspace({
+    coderUsername,
+    templateName,
+    workspaceName,
+    parametersFilePath,
+  }: {
+    coderUsername: string;
+    templateName: string;
+    workspaceName: string;
+    parametersFilePath: string;
+  }) {
+    const fullWorkspaceName = `${coderUsername}/${workspaceName}`;
+    return (
+      await this
+        .exec`bash -c "yes '' || true" | coder create --yes --template ${templateName} ${fullWorkspaceName} --rich-parameter-file ${parametersFilePath}`
+    ).text();
+  }
+}
