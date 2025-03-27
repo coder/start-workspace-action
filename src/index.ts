@@ -183,9 +183,16 @@ export class StartWorkspaceAction {
       const userId = await this.githubGetUserIdFromUsername(
         this.input.githubUsername
       );
-      coderUsername = this.parseCoderUsersListOutput(
-        await this.coderUsersList(userId)
-      );
+      try {
+        coderUsername = this.parseCoderUsersListOutput(
+          await this.coderUsersList(userId)
+        );
+      } catch (error) {
+        const externalAuthPage = `${this.input.coderUrl}/settings/external-auth`;
+        throw new UserFacingError(
+          `No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder: ${externalAuthPage}`
+        );
+      }
       this.logger.log(
         `Coder username for GitHub user ${this.input.githubUsername} is ${coderUsername}`
       );
@@ -205,7 +212,7 @@ export class StartWorkspaceAction {
       commentId: this.input.githubStatusCommentId,
     });
     commentBody =
-      commentBody + `\nWorkspace will be available here: ${workspaceUrl}\n\n`;
+      commentBody + `\nWorkspace will be available here: ${workspaceUrl}`;
 
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
@@ -217,20 +224,20 @@ export class StartWorkspaceAction {
     const parametersFilePath = await this.createParametersFile(
       this.input.workspaceParameters
     );
-    console.log("Starting workspace");
+    this.logger.log("Starting workspace");
     await this.coderStartWorkspace({
       coderUsername,
       templateName: this.input.templateName,
       workspaceName: this.input.workspaceName,
       parametersFilePath,
     });
-    console.log("Workspace started");
+    this.logger.log("Workspace started");
     await fs.unlink(parametersFilePath);
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
       repo: this.input.githubRepoName,
       commentId: this.input.githubStatusCommentId,
-      comment: `✅ Workspace started: ${workspaceUrl}\n\nView [Github Actions logs](${this.input.githubWorkflowRunUrl}).`,
+      comment: `✅ Workspace started: ${workspaceUrl}\nView [Github Actions logs](${this.input.githubWorkflowRunUrl}).`,
     });
   }
 }

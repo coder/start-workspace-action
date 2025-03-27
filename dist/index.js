@@ -1,4 +1,4 @@
-// Source hash: e8cd3b171b3e2dec0d6b326f6c882aee3964a5aaa1075e6d967444ed1228a86c
+// Source hash: 33b5220d26be2ad53ce68484968fb534f4b30e903214d53708f3403cf579cf1d
 import { createRequire as createRequire2 } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -25759,7 +25759,12 @@ class StartWorkspaceAction {
       assert(this.input.githubUsername, "GitHub username is required");
       this.logger.log(`Getting Coder username for GitHub user ${this.input.githubUsername}`);
       const userId = await this.githubGetUserIdFromUsername(this.input.githubUsername);
-      coderUsername = this.parseCoderUsersListOutput(await this.coderUsersList(userId));
+      try {
+        coderUsername = this.parseCoderUsersListOutput(await this.coderUsersList(userId));
+      } catch (error) {
+        const externalAuthPage = `${this.input.coderUrl}/settings/external-auth`;
+        throw new UserFacingError(`No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder: ${externalAuthPage}`);
+      }
       this.logger.log(`Coder username for GitHub user ${this.input.githubUsername} is ${coderUsername}`);
     } else {
       this.logger.log(`Using Coder username ${this.input.coderUsername}`);
@@ -25772,9 +25777,7 @@ class StartWorkspaceAction {
       commentId: this.input.githubStatusCommentId
     });
     commentBody = commentBody + `
-Workspace will be available here: ${workspaceUrl}
-
-`;
+Workspace will be available here: ${workspaceUrl}`;
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
       repo: this.input.githubRepoName,
@@ -25782,21 +25785,20 @@ Workspace will be available here: ${workspaceUrl}
       comment: commentBody
     });
     const parametersFilePath = await this.createParametersFile(this.input.workspaceParameters);
-    console.log("Starting workspace");
+    this.logger.log("Starting workspace");
     await this.coderStartWorkspace({
       coderUsername,
       templateName: this.input.templateName,
       workspaceName: this.input.workspaceName,
       parametersFilePath
     });
-    console.log("Workspace started");
+    this.logger.log("Workspace started");
     await fs3.unlink(parametersFilePath);
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
       repo: this.input.githubRepoName,
       commentId: this.input.githubStatusCommentId,
       comment: `✅ Workspace started: ${workspaceUrl}
-
 View [Github Actions logs](${this.input.githubWorkflowRunUrl}).`
     });
   }
