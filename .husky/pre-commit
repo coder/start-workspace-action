@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run the build command
+bun run build
+
+# Verify the build hash
+bun run verify-build
