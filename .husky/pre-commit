@@ -1,8 +1,17 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Ensure there are no unstaged changes in the src/ directory
+if git diff --name-only -- src/ | grep -q .; then
+    echo "Error: There are unstaged changes in the src/ directory."
+    echo "Please commit or stash your changes before committing."
+    exit 1
+fi
+
 # Run the build command
 bun run build
 
 # Verify the build hash
 bun run verify-build
+
+git add dist/index.js
