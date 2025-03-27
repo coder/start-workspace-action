@@ -14,5 +14,8 @@
     "build": "bun build ./src/index.ts --target node --bundle --outfile dist/index.js && bash scripts/update-build-hash.sh",
     "verify-build": "bash scripts/verify-build.sh",
     "prepare": "husky install"
+  },
+  "dependencies": {
+    "dedent": "^1.5.3"
   }
 }
