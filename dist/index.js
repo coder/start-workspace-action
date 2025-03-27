@@ -1,4 +1,4 @@
-// Source hash: 9ba27b71f6b1f3bc4d64475a7e6e6085e4fb56d14141b5ae897182d6302ba14c
+// Source hash: e8cd3b171b3e2dec0d6b326f6c882aee3964a5aaa1075e6d967444ed1228a86c
 import { createRequire as createRequire2 } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -22175,7 +22175,7 @@ var {
 } = globalThis.Deno ? globalThis.require("./index.cjs") : __module__;
 
 // src/index.ts
-import { writeFile } from "fs/promises";
+import fs3 from "fs/promises";
 
 // node_modules/universal-user-agent/index.js
 function getUserAgent() {
@@ -25662,26 +25662,22 @@ class UserFacingError extends Error {
 
 class StartWorkspaceAction {
   logger;
-  githubUsername;
-  coderUrl;
-  coderToken;
   quietExec;
+  input;
   octokit;
-  constructor(logger, githubUsername, coderUrl, coderToken, quietExec, githubToken) {
+  constructor(logger, quietExec, input) {
     this.logger = logger;
-    this.githubUsername = githubUsername;
-    this.coderUrl = coderUrl;
-    this.coderToken = coderToken;
     this.quietExec = quietExec;
-    this.octokit = new Octokit2({ auth: githubToken });
+    this.input = input;
+    this.octokit = new Octokit2({ auth: input.githubToken });
   }
   async exec(strings, ...args) {
     try {
       const output = await $2({
         env: {
           ...process.env,
-          CODER_URL: this.coderUrl,
-          CODER_TOKEN: this.coderToken
+          CODER_URL: this.input.coderUrl,
+          CODER_TOKEN: this.input.coderToken
         }
       })(strings, ...args).quiet(this.quietExec);
       if (output.exitCode !== 0) {
@@ -25696,12 +25692,12 @@ class StartWorkspaceAction {
     const lines = output.trim().split(`
 `);
     if (lines.length < 2) {
-      assert(this.githubUsername, "GitHub username is required");
-      throw new UserFacingError(`No Coder username mapping found for GitHub user @${this.githubUsername}`);
+      assert(this.input.githubUsername, "GitHub username is required");
+      throw new UserFacingError(`No Coder username mapping found for GitHub user @${this.input.githubUsername}`);
     }
     if (lines.length > 2) {
       const usernames = lines.slice(1).map((line) => line.trim());
-      this.logger.warn(`Multiple Coder usernames found for GitHub user ${this.githubUsername}: ${usernames.join(", ")}. Using the first one.`);
+      this.logger.warn(`Multiple Coder usernames found for GitHub user ${this.input.githubUsername}: ${usernames.join(", ")}. Using the first one.`);
     }
     const username = lines[1]?.trim();
     assert(username, "Coder username not found in output");
@@ -25712,11 +25708,11 @@ class StartWorkspaceAction {
   }
   async createParametersFile(parameters) {
     const tmpFilePath = `/tmp/coder-parameters-${Math.round(Math.random() * 1e6)}.yml`;
-    await writeFile(tmpFilePath, parameters);
+    await fs3.writeFile(tmpFilePath, parameters);
     return tmpFilePath;
   }
   createWorkspaceUrl(coderUsername, workspaceName) {
-    return `${this.coderUrl}/${coderUsername}/${workspaceName}`;
+    return `${this.input.coderUrl}/${coderUsername}/${workspaceName}`;
   }
   async coderStartWorkspace({
     coderUsername,
@@ -25739,6 +25735,69 @@ class StartWorkspaceAction {
       repo: args.repo,
       comment_id: args.commentId,
       body: args.comment
+    });
+  }
+  async githubGetIssueCommentBody(args) {
+    const response = await this.octokit.rest.issues.getComment({
+      owner: args.owner,
+      repo: args.repo,
+      comment_id: args.commentId
+    });
+    const body = response.data.body;
+    assert(body, "Issue comment body is required");
+    return body;
+  }
+  async execute() {
+    if (!this.input.githubUsername && !this.input.coderUsername) {
+      throw new Error("GitHub username or Coder username is required");
+    }
+    if (this.input.githubUsername && this.input.coderUsername) {
+      throw new Error("Only one of GitHub username or Coder username may be set");
+    }
+    let coderUsername = this.input.coderUsername ?? "";
+    if (coderUsername === "") {
+      assert(this.input.githubUsername, "GitHub username is required");
+      this.logger.log(`Getting Coder username for GitHub user ${this.input.githubUsername}`);
+      const userId = await this.githubGetUserIdFromUsername(this.input.githubUsername);
+      coderUsername = this.parseCoderUsersListOutput(await this.coderUsersList(userId));
+      this.logger.log(`Coder username for GitHub user ${this.input.githubUsername} is ${coderUsername}`);
+    } else {
+      this.logger.log(`Using Coder username ${this.input.coderUsername}`);
+    }
+    const workspaceUrl = this.createWorkspaceUrl(coderUsername, this.input.workspaceName);
+    this.logger.log(`Workspace URL: ${workspaceUrl}`);
+    let commentBody = await this.githubGetIssueCommentBody({
+      owner: this.input.githubRepoOwner,
+      repo: this.input.githubRepoName,
+      commentId: this.input.githubStatusCommentId
+    });
+    commentBody = commentBody + `
+Workspace will be available here: ${workspaceUrl}
+
+`;
+    await this.githubUpdateIssueComment({
+      owner: this.input.githubRepoOwner,
+      repo: this.input.githubRepoName,
+      commentId: this.input.githubStatusCommentId,
+      comment: commentBody
+    });
+    const parametersFilePath = await this.createParametersFile(this.input.workspaceParameters);
+    console.log("Starting workspace");
+    await this.coderStartWorkspace({
+      coderUsername,
+      templateName: this.input.templateName,
+      workspaceName: this.input.workspaceName,
+      parametersFilePath
+    });
+    console.log("Workspace started");
+    await fs3.unlink(parametersFilePath);
+    await this.githubUpdateIssueComment({
+      owner: this.input.githubRepoOwner,
+      repo: this.input.githubRepoName,
+      commentId: this.input.githubStatusCommentId,
+      comment: `✅ Workspace started: ${workspaceUrl}
+
+View [Github Actions logs](${this.input.githubWorkflowRunUrl}).`
     });
   }
 }

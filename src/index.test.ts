@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
   StartWorkspaceAction,
   UserFacingError,
+  type ActionInput,
   type ExecOutput,
   type Logger,
 } from ".";
@@ -25,26 +26,36 @@ class TestLogger implements Logger {
 }
 
 interface ActionParams {
+  input?: Partial<ActionInput>;
   logger?: Logger;
-  githubUsername?: string;
-  githubUsernameUndefined?: boolean;
-  coderUrl?: string;
-  coderToken?: string;
   exec?: typeof StartWorkspaceAction.prototype.exec;
   dontOverrideExec?: boolean;
   quietExec?: boolean;
-  githubToken?: string;
 }
 
 const newAction = (params?: ActionParams) => {
   const action = new StartWorkspaceAction(
     params?.logger ?? new TestLogger(),
-    params?.githubUsername ??
-      (params?.githubUsernameUndefined ? undefined : "github-user"),
-    params?.coderUrl ?? "https://example.com",
-    params?.coderToken ?? "coder-token",
     params?.quietExec ?? true,
-    params?.githubToken ?? "github-token"
+    {
+      githubUsername: "github-user",
+      coderUsername: "coder-user",
+      coderUrl: "https://example.com",
+      coderToken: "coder-token",
+      workspaceName: "workspace-name",
+      githubStatusCommentId: 123,
+      githubRepoOwner: "github-repo-owner",
+      githubRepoName: "github-repo-name",
+      githubToken: "github-token",
+      githubWorkflowRunUrl: "https://example.com/workflow-run",
+      templateName: "ubuntu",
+      workspaceParameters: dedent`
+        key: value
+        key2: value2
+        key3: value3
+      `.trim(),
+      ...(params?.input ?? {}),
+    }
   );
   if (!params?.dontOverrideExec) {
     action.exec =
