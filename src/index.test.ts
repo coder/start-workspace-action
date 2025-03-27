@@ -75,5 +75,14 @@ describe("StartWorkspaceAction", () => {
     expect(logger.logs).toEqual([]);
     expect(logger.warns).toEqual([]);
     expect(logger.errors).toEqual([]);
+
+    // Invalid output
+    expect(() =>
+      action.parseCoderUsersListOutput(dedent`
+        USERNAME
+            
+        hugo
+    `)
+    ).toThrow("Coder username not found in output");
   });
 });
