@@ -59,7 +59,7 @@ export class StartWorkspaceAction {
     );
     if (users.length === 0) {
       throw new UserFacingError(
-        `No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder: ${externalAuthPage}`
+        `No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder and try again: ${externalAuthPage}`
       );
     }
     if (users.length > 1) {

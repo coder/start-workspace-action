@@ -117,7 +117,7 @@ describe("StartWorkspaceAction", () => {
     returnValue.usernames = [];
     expect(() => action.coderUsernameByGitHubId(123)).toThrow(
       new UserFacingError(
-        "No matching Coder user found for GitHub user @github-user. Please connect your GitHub account with Coder: https://example.com/settings/external-auth"
+        "No matching Coder user found for GitHub user @github-user. Please connect your GitHub account with Coder and try again: https://example.com/settings/external-auth"
       )
     );
     expect(logger.logs).toEqual([]);
@@ -285,7 +285,7 @@ describe("StartWorkspaceAction", () => {
       );
       expect(mock.error).toBeInstanceOf(UserFacingError);
       expect((mock.error as any).message).toEqual(
-        `No matching Coder user found for GitHub user @hugo. Please connect your GitHub account with Coder: https://example.com/settings/external-auth`
+        `No matching Coder user found for GitHub user @hugo. Please connect your GitHub account with Coder and try again: https://example.com/settings/external-auth`
       );
     });
 

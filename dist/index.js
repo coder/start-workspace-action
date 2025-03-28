@@ -1,4 +1,4 @@
-// Source hash: 5596981e2578d0a4c35b0f29825341a305a25343c9cfc836afbf57676ddddfc2
+// Source hash: d23dcc6fda8ea3f1aee204e40a65895746b1c48ae39e676f43dbf3c12c27dac9
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30495,7 +30495,7 @@ class StartWorkspaceAction {
     const externalAuthPage = `${this.input.coderUrl}/settings/external-auth`;
     const users = await this.coder.getCoderUsersByGitHubId(githubUserId.toString());
     if (users.length === 0) {
-      throw new UserFacingError(`No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder: ${externalAuthPage}`);
+      throw new UserFacingError(`No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder and try again: ${externalAuthPage}`);
     }
     if (users.length > 1) {
       throw new UserFacingError(`Multiple Coder users found for GitHub user ${this.input.githubUsername}: ${users.slice(0, 3).join(", ")}${users.length > 3 ? `, and others` : ""}. Please connect other users to other GitHub accounts and try again.`);
