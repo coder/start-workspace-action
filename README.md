@@ -2,6 +2,8 @@
 
 This GitHub Action starts a [Coder](https://coder.com) workspace and posts a status comment on a GitHub issue that gets updated with progress. It's designed to be used as part of a workflow triggered by events you configure.
 
+<img width="937" alt="Screenshot 2025-03-28 at 16 50 58" src="https://github.com/user-attachments/assets/b0473626-01f8-4f8e-9298-e75447f214be" />
+
 ## Features
 
 - Starts a Coder workspace using your specified template
