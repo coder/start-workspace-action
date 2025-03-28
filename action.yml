@@ -48,6 +48,8 @@ runs:
           });
           core.setOutput('comment_id', comment.data.id);
           core.setOutput('run_url', runUrl);
+          core.setOutput('repo_owner', context.repo.owner);
+          core.setOutput('repo_name', context.repo.repo);
 
     - name: Start workspace
       shell: bash
@@ -58,8 +60,8 @@ runs:
         CODER_TOKEN: ${{ inputs.coder-token }}
         WORKSPACE_NAME: ${{ inputs.workspace-name }}
         GITHUB_STATUS_COMMENT_ID: ${{ steps.initial-comment.outputs.comment_id }}
-        GITHUB_REPO_OWNER: ${{ context.repo.owner }}
-        GITHUB_REPO_NAME: ${{ context.repo.repo }}
+        GITHUB_REPO_OWNER: ${{ steps.initial-comment.outputs.repo_owner }}
+        GITHUB_REPO_NAME: ${{ steps.initial-comment.outputs.repo_name }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_WORKFLOW_RUN_URL: ${{ steps.initial-comment.outputs.run_url }}
         TEMPLATE_NAME: ${{ inputs.template-name }}
