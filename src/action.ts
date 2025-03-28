@@ -19,7 +19,16 @@ export class UserFacingError extends Error {}
 export const ActionInputSchema = z.object({
   githubUsername: z.string().min(1).optional(),
   coderUsername: z.string().min(1).optional(),
-  coderUrl: z.string().min(1),
+  coderUrl: z
+    .string()
+    .min(1)
+    .transform((val) => {
+      const trimmed = val.trim();
+      if (trimmed.endsWith("/")) {
+        return trimmed.slice(0, -1);
+      }
+      return trimmed;
+    }),
   coderToken: z.string().min(1),
   workspaceName: z.string().min(1),
   githubStatusCommentId: z

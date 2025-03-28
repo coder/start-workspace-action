@@ -1,4 +1,4 @@
-// Source hash: d23dcc6fda8ea3f1aee204e40a65895746b1c48ae39e676f43dbf3c12c27dac9
+// Source hash: 502e316a739f1716d693e20b5f00db3e1fec499dd7ae21b8777097eb429691e8
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30466,7 +30466,13 @@ class UserFacingError extends Error {
 var ActionInputSchema = z.object({
   githubUsername: z.string().min(1).optional(),
   coderUsername: z.string().min(1).optional(),
-  coderUrl: z.string().min(1),
+  coderUrl: z.string().min(1).transform((val) => {
+    const trimmed = val.trim();
+    if (trimmed.endsWith("/")) {
+      return trimmed.slice(0, -1);
+    }
+    return trimmed;
+  }),
   coderToken: z.string().min(1),
   workspaceName: z.string().min(1),
   githubStatusCommentId: z.string().min(1).transform((val) => parseInt(val)),
