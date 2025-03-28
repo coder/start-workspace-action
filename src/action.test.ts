@@ -233,8 +233,8 @@ describe("StartWorkspaceAction", () => {
         {
           issueComments: [
             "Initial comment",
-            "Initial comment\nWorkspace will be available at: https://example.com/hugo/workspace-name",
-            "✅ Coder workspace started! You can view the action logs [here](https://github.com/workflow-run).\nWorkspace is available at: https://example.com/hugo/workspace-name",
+            "Initial comment\n\nWorkspace will be available at: https://example.com/hugo/workspace-name",
+            "✅ Coder workspace started! You can view the action logs [here](https://github.com/workflow-run).\n\nWorkspace is available at: https://example.com/hugo/workspace-name",
           ],
           workspaceStarted: true,
           startWorkspace: {
@@ -257,8 +257,8 @@ describe("StartWorkspaceAction", () => {
         {
           issueComments: [
             "Initial comment",
-            "Initial comment\nWorkspace will be available at: https://example.com/hugo-coder/workspace-name",
-            "✅ Coder workspace started! You can view the action logs [here](https://github.com/workflow-run).\nWorkspace is available at: https://example.com/hugo-coder/workspace-name",
+            "Initial comment\n\nWorkspace will be available at: https://example.com/hugo-coder/workspace-name",
+            "✅ Coder workspace started! You can view the action logs [here](https://github.com/workflow-run).\n\nWorkspace is available at: https://example.com/hugo-coder/workspace-name",
           ],
           workspaceStarted: true,
           startWorkspace: {

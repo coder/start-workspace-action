@@ -1,4 +1,4 @@
-// Source hash: bede50fef0a5393efa961715144c209f04f8e036b989dec2839d865fbab7b3df
+// Source hash: 5596981e2578d0a4c35b0f29825341a305a25343c9cfc836afbf57676ddddfc2
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30580,6 +30580,7 @@ class StartWorkspaceAction {
       commentId: this.input.githubStatusCommentId
     });
     commentBody = commentBody + `
+
 Workspace will be available at: ${workspaceUrl}`;
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
@@ -30598,6 +30599,7 @@ Workspace will be available at: ${workspaceUrl}`;
       repo: this.input.githubRepoName,
       commentId: this.input.githubStatusCommentId,
       comment: `✅ Coder workspace started! You can view the action logs [here](${this.input.githubWorkflowRunUrl}).
+
 Workspace is available at: ${workspaceUrl}`
     });
   }
