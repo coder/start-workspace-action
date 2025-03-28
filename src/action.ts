@@ -17,18 +17,21 @@ export interface ExecOutput {
 export class UserFacingError extends Error {}
 
 export const ActionInputSchema = z.object({
-  githubUsername: z.string().optional(),
-  coderUsername: z.string().optional(),
-  coderUrl: z.string(),
-  coderToken: z.string(),
-  workspaceName: z.string(),
-  githubStatusCommentId: z.string().transform((val) => parseInt(val)),
-  githubRepoOwner: z.string(),
-  githubRepoName: z.string(),
-  githubToken: z.string(),
-  githubWorkflowRunUrl: z.string(),
-  templateName: z.string(),
-  workspaceParameters: z.string(),
+  githubUsername: z.string().min(1).optional(),
+  coderUsername: z.string().min(1).optional(),
+  coderUrl: z.string().min(1),
+  coderToken: z.string().min(1),
+  workspaceName: z.string().min(1),
+  githubStatusCommentId: z
+    .string()
+    .min(1)
+    .transform((val) => parseInt(val)),
+  githubRepoOwner: z.string().min(1),
+  githubRepoName: z.string().min(1),
+  githubToken: z.string().min(1),
+  githubWorkflowRunUrl: z.string().min(1),
+  templateName: z.string().min(1),
+  workspaceParameters: z.string().min(1),
 });
 
 export type ActionInput = z.infer<typeof ActionInputSchema>;

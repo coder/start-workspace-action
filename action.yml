@@ -34,6 +34,7 @@ runs:
   using: 'composite'
   steps:
     - name: Initial comment
+      id: initial-comment
       uses: actions/github-script@v6
       with:
         github-token: ${{ inputs.github-token }}

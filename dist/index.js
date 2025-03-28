@@ -1,4 +1,4 @@
-// Source hash: 3fa8c769a35e21a765e39db4e96bee092d15fe588d02aee47881b8f88188b978
+// Source hash: 19ceaee5753b47a4b702e1a86f0e92985f96bae6d23e4424bfaad638a7502b1b
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30464,18 +30464,18 @@ Failed to list users by GitHub ID, status code: ${response.status}, body: ${erro
 class UserFacingError extends Error {
 }
 var ActionInputSchema = z.object({
-  githubUsername: z.string().optional(),
-  coderUsername: z.string().optional(),
-  coderUrl: z.string(),
-  coderToken: z.string(),
-  workspaceName: z.string(),
-  githubStatusCommentId: z.string().transform((val) => parseInt(val)),
-  githubRepoOwner: z.string(),
-  githubRepoName: z.string(),
-  githubToken: z.string(),
-  githubWorkflowRunUrl: z.string(),
-  templateName: z.string(),
-  workspaceParameters: z.string()
+  githubUsername: z.string().min(1).optional(),
+  coderUsername: z.string().min(1).optional(),
+  coderUrl: z.string().min(1),
+  coderToken: z.string().min(1),
+  workspaceName: z.string().min(1),
+  githubStatusCommentId: z.string().min(1).transform((val) => parseInt(val)),
+  githubRepoOwner: z.string().min(1),
+  githubRepoName: z.string().min(1),
+  githubToken: z.string().min(1),
+  githubWorkflowRunUrl: z.string().min(1),
+  templateName: z.string().min(1),
+  workspaceParameters: z.string().min(1)
 });
 var WorkspaceParametersSchema = z.record(z.string(), z.string());
 
