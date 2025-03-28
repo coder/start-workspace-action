@@ -39,7 +39,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = '${{ inputs.github-issue-number }}' ? Number('${{ inputs.github-issue-number }}') : github.context.issue.number;
+          const issueNumber = '${{ inputs.github-issue-number }}' ? Number('${{ inputs.github-issue-number }}') : context.issue.number;
           if (!issueNumber) {
             core.setFailed('No issue number provided and no issue context available');
             return;
@@ -82,11 +82,12 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          if (!steps.initial-comment.outputs.comment_id) {
+          const commentIdString = '${{ steps.initial-comment.outputs.comment_id }}';
+          if (!commentIdString) {
             core.warning('No comment ID found, skipping status update');
             return;
           }
-          const commentId = Number('${{ steps.initial-comment.outputs.comment_id }}');
+          const commentId = Number(commentIdString);
           const runUrl = '${{ steps.initial-comment.outputs.run_url }}';
           const errorMsg = process.env["ERROR_MSG"];
           await github.rest.issues.updateComment({
