@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Start Coder workspace
-        uses: coder/start-workspace-action@main
+        uses: coder/start-workspace-action@v0.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           github-issue-number: ${{ github.event.issue.number }}
@@ -103,7 +103,7 @@ jobs:
     environment: coder-production
     steps:
       - name: Start Coder workspace
-        uses: coder/start-workspace-action@main
+        uses: coder/start-workspace-action@v0.1.0
         with:
           coder-token: ${{ secrets.CODER_TOKEN }}
           # other inputs...
