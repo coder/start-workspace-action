@@ -31,9 +31,7 @@ const main = async () => {
       Object.entries(inputEnv).map(([key, value]) => [key, process.env[value]])
     )
   );
-
-  const action = new StartWorkspaceAction(console, false, input);
-
+  const action = new StartWorkspaceAction(console, input);
   await action.execute();
 };
 

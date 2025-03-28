@@ -7,7 +7,6 @@ import {
   type Logger,
 } from "./action";
 import dedent from "dedent";
-import fs from "fs/promises";
 import { unwrap } from "./utils";
 
 class TestLogger implements Logger {
@@ -29,9 +28,6 @@ class TestLogger implements Logger {
 interface ActionParams {
   input?: Partial<ActionInput>;
   logger?: Logger;
-  exec?: typeof StartWorkspaceAction.prototype.exec;
-  dontOverrideExec?: boolean;
-  quietExec?: boolean;
 }
 
 const newAction = (params?: ActionParams) => {
@@ -59,38 +55,26 @@ const newAction = (params?: ActionParams) => {
     (defaults as any)[key] = value;
   }
 
-  const action = new StartWorkspaceAction(
-    params?.logger ?? new TestLogger(),
-    params?.quietExec ?? true,
-    {
-      githubUsername: "github-user",
-      coderUsername: undefined,
-      coderUrl: "https://example.com",
-      coderToken: "coder-token",
-      workspaceName: "workspace-name",
-      githubStatusCommentId: 123,
-      githubRepoOwner: "github-repo-owner",
-      githubRepoName: "github-repo-name",
-      githubToken: "github-token",
-      githubWorkflowRunUrl: "https://github.com/workflow-run",
-      templateName: "ubuntu",
-      workspaceParameters: dedent`
+  const action = new StartWorkspaceAction(params?.logger ?? new TestLogger(), {
+    githubUsername: "github-user",
+    coderUsername: undefined,
+    coderUrl: "https://example.com",
+    coderToken: "coder-token",
+    workspaceName: "workspace-name",
+    githubStatusCommentId: 123,
+    githubRepoOwner: "github-repo-owner",
+    githubRepoName: "github-repo-name",
+    githubToken: "github-token",
+    githubWorkflowRunUrl: "https://github.com/workflow-run",
+    templateName: "ubuntu",
+    workspaceParameters: dedent`
         key: value
         key2: value2
         key3: value3
       `.trim(),
-      ...(params?.input ?? {}),
-    }
-  );
-  if (!params?.dontOverrideExec) {
-    action.exec =
-      params?.exec ??
-      (() => {
-        throw new Error(
-          "exec is not available in tests unless dontOverrideExec is true"
-        );
-      });
-  }
+    ...(params?.input ?? {}),
+  });
+
   return action;
 };
 
@@ -106,51 +90,32 @@ const identityExec = async (
 };
 
 describe("StartWorkspaceAction", () => {
-  it("exec", async () => {
-    const action = newAction({
-      dontOverrideExec: true,
-    });
-    expect(() => action.exec`invalidcommand ${1} hey ${2}`).toThrow(
-      "Failed to execute command: invalidcommand REDACTED hey REDACTED"
-    );
-
-    const output = await action.exec`echo "Hello, ${"world"}!"`;
-    expect(output.text()).toBe("Hello, world!\n");
-  });
-
-  it("parseCoderUsersListOutput", () => {
+  it("coderUsernameByGitHubId", async () => {
     const logger = new TestLogger();
     const action = newAction({ logger });
+    const returnValue = { usernames: ["hugo"] };
+    action["coder"].getCoderUsersByGitHubId = async () => returnValue.usernames;
 
-    const username = action.parseCoderUsersListOutput(dedent`
-        USERNAME
-        hugo
-    `);
+    const username = await action.coderUsernameByGitHubId(123);
     expect(username).toBe("hugo");
 
     expect(logger.logs).toEqual([]);
     expect(logger.warns).toEqual([]);
     expect(logger.errors).toEqual([]);
 
-    const username2 = action.parseCoderUsersListOutput(dedent`
-        USERNAME
-        hugo
-        alice
-    `);
-    expect(username2).toBe("hugo");
+    returnValue.usernames = ["hugo", "alice", "bob", "charlie"];
+    expect(() => action.coderUsernameByGitHubId(123)).toThrowError(
+      new UserFacingError(
+        "Multiple Coder users found for GitHub user github-user: hugo, alice, bob, and others. Please connect other users to other GitHub accounts and try again."
+      )
+    );
 
     expect(logger.logs).toEqual([]);
-    expect(logger.warns).toEqual([
-      "Multiple Coder usernames found for GitHub user github-user: hugo, alice. Using the first one.",
-    ]);
+    expect(logger.warns).toEqual([]);
     expect(logger.errors).toEqual([]);
 
-    logger.warns = [];
-    expect(() =>
-      action.parseCoderUsersListOutput(dedent`
-        USERNAME
-    `)
-    ).toThrowError(
+    returnValue.usernames = [];
+    expect(() => action.coderUsernameByGitHubId(123)).toThrow(
       new UserFacingError(
         "No matching Coder user found for GitHub user @github-user. Please connect your GitHub account with Coder: https://example.com/settings/external-auth"
       )
@@ -158,73 +123,21 @@ describe("StartWorkspaceAction", () => {
     expect(logger.logs).toEqual([]);
     expect(logger.warns).toEqual([]);
     expect(logger.errors).toEqual([]);
-
-    // Test that the output is trimmed
-    const username3 = action.parseCoderUsersListOutput(dedent`
-           USERNAME
-        hugo   
-    `);
-    expect(username3).toBe("hugo");
-
-    expect(logger.logs).toEqual([]);
-    expect(logger.warns).toEqual([]);
-    expect(logger.errors).toEqual([]);
-
-    // Invalid output
-    expect(() =>
-      action.parseCoderUsersListOutput(dedent`
-        USERNAME
-            
-        hugo
-    `)
-    ).toThrow("Coder username not found in output");
   });
 
-  it("coderUsersList", async () => {
-    const action = newAction({
-      exec: identityExec,
-    });
-
-    const output = await action.coderUsersList(123);
-    expect(output).toBe(
-      "coder users list --github-user-id 123 --column username"
-    );
-  });
-
-  it("createParametersFile", async () => {
-    const action = newAction({
-      exec: identityExec,
-    });
+  it("parseParameters", async () => {
+    const action = newAction();
     const parameters = dedent`
       key: value
       key2: value2
       key3: value3
     `.trim();
-
-    const filePath = await action.createParametersFile(parameters);
-    try {
-      expect(filePath).toMatch(/^\/tmp\/coder-parameters-\d+\.yml$/);
-      const fileContent = await fs.readFile(filePath, "utf-8");
-      expect(fileContent).toBe(parameters);
-    } finally {
-      await fs.unlink(filePath);
-    }
-  });
-
-  it("coderStartWorkspace", async () => {
-    const action = newAction({
-      exec: identityExec,
+    const parsed = await action.parseParameters(parameters);
+    expect(parsed).toEqual({
+      key: "value",
+      key2: "value2",
+      key3: "value3",
     });
-
-    const output = await action.coderStartWorkspace({
-      coderUsername: "hugo",
-      templateName: "ubuntu",
-      workspaceName: "test-workspace",
-      parametersFilePath: "/tmp/coder-parameters-123.yml",
-    });
-    expect(output).toBe(
-      "bash -c \"yes '' || true\" | coder create --yes --template ubuntu hugo/test-workspace --rich-parameter-file /tmp/coder-parameters-123.yml"
-    );
   });
 
   describe("execute", () => {
@@ -240,7 +153,7 @@ describe("StartWorkspaceAction", () => {
     };
 
     interface MockForExecuteParams {
-      coderUsersList?: string;
+      coderUsernamesByGitHubId?: string[];
       initialIssueComment?: string;
       githubUserId?: number;
     }
@@ -257,10 +170,9 @@ describe("StartWorkspaceAction", () => {
       action.coderStartWorkspace = async (args) => {
         result.workspaceStarted = true;
         result.startWorkspaceArgs = args;
-        return "";
       };
-      action.coderUsersList = async () => {
-        return params.coderUsersList ?? "";
+      action["coder"].getCoderUsersByGitHubId = async () => {
+        return params.coderUsernamesByGitHubId ?? [];
       };
       action.githubGetIssueCommentBody = async () => {
         return unwrap(result.issueComments[result.issueComments.length - 1]);
@@ -307,16 +219,6 @@ describe("StartWorkspaceAction", () => {
       expect(mock.startWorkspaceArgs?.workspaceName).toBe(
         expected.startWorkspace?.workspaceName as any
       );
-      if (mock.startWorkspaceArgs != null) {
-        expect(mock.startWorkspaceArgs?.parametersFilePath).toMatch(
-          /^\/tmp\/coder-parameters-\d+\.yml$/
-        );
-      }
-      if (mock.workspaceStarted) {
-        expect(() =>
-          fs.stat(unwrap(mock.startWorkspaceArgs?.parametersFilePath))
-        ).toThrow("no such file or directory");
-      }
       return mock;
     };
 
@@ -324,10 +226,7 @@ describe("StartWorkspaceAction", () => {
       await executeTest(
         {},
         {
-          coderUsersList: dedent`
-          USERNAME
-          hugo
-        `.trim(),
+          coderUsernamesByGitHubId: ["hugo"],
           initialIssueComment: "Initial comment",
           githubUserId: 123,
         },
@@ -377,9 +276,7 @@ describe("StartWorkspaceAction", () => {
           input: { githubUsername: "hugo" },
         },
         {
-          coderUsersList: dedent`
-            USERNAME
-          `.trim(),
+          coderUsernamesByGitHubId: [],
         },
         {
           issueComments: [""],
@@ -389,6 +286,25 @@ describe("StartWorkspaceAction", () => {
       expect(mock.error).toBeInstanceOf(UserFacingError);
       expect((mock.error as any).message).toEqual(
         `No matching Coder user found for GitHub user @hugo. Please connect your GitHub account with Coder: https://example.com/settings/external-auth`
+      );
+    });
+
+    it("multiple coder users for same github user", async () => {
+      const mock = await executeTest(
+        {
+          input: { githubUsername: "hugo" },
+        },
+        {
+          coderUsernamesByGitHubId: ["hugo", "alice", "bob", "charlie"],
+        },
+        {
+          issueComments: [""],
+          workspaceStarted: false,
+        }
+      );
+      expect(mock.error).toBeInstanceOf(UserFacingError);
+      expect((mock.error as any).message).toEqual(
+        `Multiple Coder users found for GitHub user hugo: hugo, alice, bob, and others. Please connect other users to other GitHub accounts and try again.`
       );
     });
   });

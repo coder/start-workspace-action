@@ -1,10 +1,8 @@
 import assert from "assert";
-import { $ as originalZx } from "zx";
-import fs from "fs/promises";
+import yaml from "yaml";
 import { Octokit } from "@octokit/rest";
 import { z } from "zod";
-
-const $ = originalZx({ nothrow: true });
+import { CoderClient } from "./coder";
 
 export interface Logger {
   log(message: string): void;
@@ -35,84 +33,49 @@ export const ActionInputSchema = z.object({
 
 export type ActionInput = z.infer<typeof ActionInputSchema>;
 
+export const WorkspaceParametersSchema = z.record(z.string(), z.string());
+
+export type WorkspaceParameters = z.infer<typeof WorkspaceParametersSchema>;
+
 export class StartWorkspaceAction {
   private readonly octokit: Octokit;
+  private readonly coder: CoderClient;
   constructor(
     private readonly logger: Logger,
-    private readonly quietExec: boolean,
     private readonly input: ActionInput
   ) {
     this.octokit = new Octokit({ auth: input.githubToken });
+    this.coder = new CoderClient(input.coderUrl, input.coderToken);
   }
 
-  async exec(
-    strings: TemplateStringsArray,
-    ...args: unknown[]
-  ): Promise<ExecOutput> {
-    try {
-      const output = await $({
-        env: {
-          ...process.env,
-          CODER_URL: this.input.coderUrl,
-          CODER_TOKEN: this.input.coderToken,
-        },
-      })(strings, ...args).quiet(this.quietExec);
-      if (output.exitCode !== 0) {
-        throw new Error(
-          `Failed to execute command: ${strings.join("REDACTED")}`
-        );
-      }
-      return output;
-    } catch (error) {
-      throw new Error(
-        `Failed to execute command: ${strings.join("REDACTED")}\nStack trace: ${
-          error instanceof Error ? error.stack : "Unknown"
-        }`
-      );
-    }
-  }
-
-  /**
-   * Parse the output of the `coder users list` command.
-   * @param output The output of the `coder users list` command.
-   * @returns The username of the Coder user.
-   */
-  parseCoderUsersListOutput(output: string): string {
-    const lines = output.trim().split("\n");
-    if (lines.length < 2) {
-      assert(this.input.githubUsername, "GitHub username is required");
-      const externalAuthPage = `${this.input.coderUrl}/settings/external-auth`;
+  async coderUsernameByGitHubId(githubUserId: number): Promise<string> {
+    assert(this.input.githubUsername, "GitHub username is required");
+    const externalAuthPage = `${this.input.coderUrl}/settings/external-auth`;
+    const users = await this.coder.getCoderUsersByGitHubId(
+      githubUserId.toString()
+    );
+    if (users.length === 0) {
       throw new UserFacingError(
         `No matching Coder user found for GitHub user @${this.input.githubUsername}. Please connect your GitHub account with Coder: ${externalAuthPage}`
       );
     }
-    if (lines.length > 2) {
-      const usernames = lines.slice(1).map((line) => line.trim());
-      this.logger.warn(
-        `Multiple Coder usernames found for GitHub user ${
+    if (users.length > 1) {
+      throw new UserFacingError(
+        `Multiple Coder users found for GitHub user ${
           this.input.githubUsername
-        }: ${usernames.join(", ")}. Using the first one.`
+        }: ${users.slice(0, 3).join(", ")}${
+          users.length > 3 ? `, and others` : ""
+        }. Please connect other users to other GitHub accounts and try again.`
       );
     }
-    const username = lines[1]?.trim();
+    const username = users[0];
     assert(username, "Coder username not found in output");
-
     return username;
   }
 
-  async coderUsersList(githubUserId: number): Promise<string> {
-    return (
-      await this
-        .exec`coder users list --github-user-id ${githubUserId} --column username`
-    ).text();
-  }
-
-  async createParametersFile(parameters: string): Promise<string> {
-    const tmpFilePath = `/tmp/coder-parameters-${Math.round(
-      Math.random() * 1000000
-    )}.yml`;
-    await fs.writeFile(tmpFilePath, parameters);
-    return tmpFilePath;
+  parseParameters(parameters: string): WorkspaceParameters {
+    const parsed = yaml.parse(parameters);
+    return WorkspaceParametersSchema.parse(parsed);
   }
 
   createWorkspaceUrl(coderUsername: string, workspaceName: string): string {
@@ -123,18 +86,25 @@ export class StartWorkspaceAction {
     coderUsername,
     templateName,
     workspaceName,
-    parametersFilePath,
+    parameters,
   }: {
     coderUsername: string;
     templateName: string;
     workspaceName: string;
-    parametersFilePath: string;
-  }): Promise<string> {
-    const fullWorkspaceName = `${coderUsername}/${workspaceName}`;
-    return (
-      await this
-        .exec`bash -c "yes '' || true" | coder create --yes --template ${templateName} ${fullWorkspaceName} --rich-parameter-file ${parametersFilePath}`
-    ).text();
+    parameters: WorkspaceParameters;
+  }): Promise<void> {
+    this.logger.log("Getting user ID");
+    const coderUserId = await this.coder.getUserID(coderUsername);
+    this.logger.log("Getting template info");
+    const { templateId } = await this.coder.getTemplateInfo(templateName);
+    this.logger.log("Creating workspace");
+    await this.coder.createWorkspace({
+      ownerID: coderUserId,
+      templateID: templateId,
+      workspaceName,
+      parameters,
+    });
+    this.logger.log("Workspace created");
   }
 
   async githubGetUserIdFromUsername(username: string): Promise<number> {
@@ -182,6 +152,9 @@ export class StartWorkspaceAction {
         "Only one of GitHub username or Coder username may be set"
       );
     }
+    const parameters = await this.parseParameters(
+      this.input.workspaceParameters
+    );
     let coderUsername = this.input.coderUsername ?? "";
     if (coderUsername === "") {
       assert(this.input.githubUsername, "GitHub username is required");
@@ -191,9 +164,7 @@ export class StartWorkspaceAction {
       const userId = await this.githubGetUserIdFromUsername(
         this.input.githubUsername
       );
-      coderUsername = this.parseCoderUsersListOutput(
-        await this.coderUsersList(userId)
-      );
+      coderUsername = await this.coderUsernameByGitHubId(userId);
       this.logger.log(
         `Coder username for GitHub user ${this.input.githubUsername} is ${coderUsername}`
       );
@@ -222,18 +193,12 @@ export class StartWorkspaceAction {
       comment: commentBody,
     });
 
-    const parametersFilePath = await this.createParametersFile(
-      this.input.workspaceParameters
-    );
-    this.logger.log("Starting workspace");
     await this.coderStartWorkspace({
       coderUsername,
       templateName: this.input.templateName,
       workspaceName: this.input.workspaceName,
-      parametersFilePath,
+      parameters,
     });
-    this.logger.log("Workspace started");
-    await fs.unlink(parametersFilePath);
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
       repo: this.input.githubRepoName,
