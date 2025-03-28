@@ -10,7 +10,10 @@ inputs:
     required: true
   github-username:
     description: 'GitHub username of the user for whom the workspace is being started'
-    required: true
+    required: false
+  coder-username:
+    description: 'Coder username'
+    required: false
   coder-url:
     description: 'Coder URL'
     required: true
@@ -37,132 +40,32 @@ runs:
         script: |
           const issueNumber = Number('${{ inputs.github-issue-number }}');
           const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-          await github.rest.issues.createComment({
+          const comment = await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issueNumber,
             body: `Starting a Coder workspace. You can track the progress [here](${runUrl}).`
           });
+          core.setOutput('comment_id', comment.data.id);
+          core.setOutput('run_url', runUrl);
 
-    - name: Check if Coder CLI is available
-      id: check-coder
+    - name: Start workspace
       shell: bash
-      run: |
-        if command -v coder &> /dev/null; then
-          echo "Coder CLI is already installed"
-          echo "coder_installed=true" >> $GITHUB_OUTPUT
-        else
-          echo "Coder CLI is not installed"
-          echo "coder_installed=false" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Install Coder CLI
-      if: steps.check-coder.outputs.coder_installed != 'true'
-      uses: coder/setup-action@4a607a8113d4e676e2d7c34caa20a814bc88bfda
-      with:
-        access_url: ${{ inputs.coder-url }}
-        coder_session_token: ${{ inputs.coder-token }}
-
-    - name: Get GitHub username and id
-      id: github-user
-      uses: actions/github-script@v6
       env:
         GITHUB_USERNAME: ${{ inputs.github-username }}
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const githubUsername = (process.env.GITHUB_USERNAME ?? '').trim();
-          const githubUser = await github.rest.users.getByUsername({
-            username: githubUsername
-          });
-          core.setOutput('github_username', githubUsername);
-          core.setOutput('github_user_id', githubUser.data.id);
-
-    - name: Get Coder Users List
-      id: coder-user-list
-      shell: bash
-      run: |
-        {
-          echo "cmd_output<<EOF"
-          coder users list \
-            --url '${{ inputs.coder-url }}' \
-            --token '${{ inputs.coder-token }}' \
-            --github-user-id '${{ steps.github-user.outputs.github_user_id }}' \
-            --column username
-          echo "EOF"
-        } >> $GITHUB_OUTPUT
-
-    - name: Get Coder User
-      id: coder-user
-      uses: actions/github-script@v6
-      env:
-        CODER_USERS_LIST_OUTPUT: ${{ steps.coder-user-list.outputs.cmd_output }}
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const listOutput = (process.env.CODER_USERS_LIST_OUTPUT ?? '').trim();
-
-          const lines = listOutput.split('\n')
-          if (lines.length < 2) {
-            console.log('No Coder username mapping found for GitHub user')
-            return
-          }
-          if (lines.length > 2) {
-            console.log('Multiple Coder usernames found for GitHub user. Using the first one.')
-          }
-          const coderUsername = lines[1].trim()
-          core.setOutput('coder_username', coderUsername)
-          core.setOutput('has_mapping', String(coderUsername.length > 0))
-
-    - name: No user mapping comment
-      if: steps.coder-user.outputs.has_mapping != 'true'
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const issueNumber = Number('${{ inputs.github-issue-number }}');
-          const githubUsername = '${{ steps.github-user.outputs.github_username }}';
-          const externalAuthPage = '${{ inputs.coder-url }}/settings/external-auth';
-          const errMsg = `No matching Coder user found for GitHub user \`${githubUsername}\`. Please connect your GitHub account with Coder: ${externalAuthPage}`;
-          require('fs').appendFileSync(process.env["GITHUB_ENV"], `ERROR_MSG=${errMsg}\n`);
-          core.setFailed(errMsg)
-
-    - name: Create parameters file
-      shell: bash
-      run: |
-        mkdir -p /tmp/coder
-        echo '${{ inputs.parameters }}' > /tmp/coder/parameters.yml
-        echo "PARAMETERS_FILE=/tmp/coder/parameters.yml" >> $GITHUB_ENV
-
-    - name: Start Coder workspace
-      id: start-workspace
-      shell: bash
-      env:
+        CODER_USERNAME: ${{ inputs.coder-username }}
         CODER_URL: ${{ inputs.coder-url }}
         CODER_TOKEN: ${{ inputs.coder-token }}
-        TEMPLATE_NAME: ${{ inputs.template-name }}
         WORKSPACE_NAME: ${{ inputs.workspace-name }}
+        GITHUB_STATUS_COMMENT_ID: ${{ steps.initial-comment.outputs.comment_id }}
+        GITHUB_REPO_OWNER: ${{ context.repo.owner }}
+        GITHUB_REPO_NAME: ${{ context.repo.repo }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_WORKFLOW_RUN_URL: ${{ steps.initial-comment.outputs.run_url }}
+        TEMPLATE_NAME: ${{ inputs.template-name }}
+        WORKSPACE_PARAMETERS: ${{ inputs.parameters }}
       run: |
-        set -o pipefail
-        set -o errexit
-
-        bash -c "yes '' || true" | coder --url '${{ inputs.coder-url }}' --token '${{ inputs.coder-token }}' create --yes --template '${{ inputs.template-name }}' '${{ inputs.workspace-name }}' --rich-parameter-file $PARAMETERS_FILE
-        WORKSPACE_URL="${{ inputs.coder-url }}/${{ steps.coder-user.outputs.coder_username }}/${{ inputs.workspace-name }}"
-        echo "workspace_url=${WORKSPACE_URL}" >> $GITHUB_OUTPUT
-
-    - name: Comment success
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const issueNumber = Number('${{ inputs.github-issue-number }}');
-          const workspaceUrl = '${{ steps.start-workspace.outputs.workspace_url }}';
-          await github.rest.issues.createComment({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issueNumber,
-            body: `✅ Workspace has been successfully started! You can access it [here](${workspaceUrl}).`
-          });
+        node "${{ github.action_path }}/dist/index.js"
 
     - name: Comment failure
       if: always() && (failure() || cancelled())
@@ -170,12 +73,12 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = Number('${{ inputs.github-issue-number }}');
-          const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const commentId = Number('${{ steps.initial-comment.outputs.comment_id }}');
+          const runUrl = '${{ steps.initial-comment.outputs.run_url }}';
           const errorMsg = process.env["ERROR_MSG"];
-          await github.rest.issues.createComment({
+          await github.rest.issues.updateComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            issue_number: issueNumber,
-            body: "❌ " + (errorMsg ?? `Failed to start workspace. Please check the [action logs](${runUrl}) for details.`)
+            comment_id: commentId,
+            body: "❌ " + (errorMsg ?? `Failed to start the workspace. Please check the [action logs](${runUrl}) for details.`)
           });
