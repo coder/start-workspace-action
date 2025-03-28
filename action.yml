@@ -1,33 +1,33 @@
 name: 'Start Coder Workspace'
-description: 'Starts a Coder workspace. Posts a comment to a GitHub issue with the workspace URL.'
+description: 'Starts a Coder workspace and posts status updates as comments on a GitHub issue.'
 inputs:
   github-token:
-    description: 'GitHub token'
+    description: 'GitHub token for posting comments'
     required: false
     default: ${{ github.token }}
   github-issue-number:
-    description: 'GitHub issue number where progress updates will be posted'
+    description: 'GitHub issue number where comments will be posted'
     required: true
   github-username:
     description: 'GitHub username of the user for whom the workspace is being started'
     required: false
   coder-username:
-    description: 'Coder username'
+    description: 'Coder username to override default user mapping (only set one of github-username or coder-username)'
     required: false
   coder-url:
-    description: 'Coder URL'
+    description: 'Coder deployment URL'
     required: true
   coder-token:
-    description: 'Coder token'
+    description: 'API token for Coder'
     required: true
   template-name:
-    description: 'Coder template name'
+    description: 'Name of the Coder template to use'
     required: true
   workspace-name:
-    description: 'Coder workspace name'
+    description: 'Name for the new workspace'
     required: true
   parameters:
-    description: 'YAML dictionary of parameters for the Coder workspace'
+    description: 'YAML-formatted parameters for the Coder workspace'
     required: true
 
 runs:
