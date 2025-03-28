@@ -45,7 +45,7 @@ runs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: issueNumber,
-            body: `Starting a Coder workspace. You can track the progress [here](${runUrl}).`
+            body: `🔄 Starting a Coder workspace. You can track the progress [here](${runUrl}).`
           });
           core.setOutput('comment_id', comment.data.id);
           core.setOutput('run_url', runUrl);

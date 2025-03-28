@@ -187,7 +187,7 @@ export class StartWorkspaceAction {
       commentId: this.input.githubStatusCommentId,
     });
     commentBody =
-      commentBody + `\nWorkspace will be available here: ${workspaceUrl}`;
+      commentBody + `\nWorkspace will be available at: ${workspaceUrl}`;
 
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,
@@ -206,7 +206,7 @@ export class StartWorkspaceAction {
       owner: this.input.githubRepoOwner,
       repo: this.input.githubRepoName,
       commentId: this.input.githubStatusCommentId,
-      comment: `✅ Workspace started: ${workspaceUrl}\nView [Github Actions logs](${this.input.githubWorkflowRunUrl}).`,
+      comment: `✅ Coder workspace started! You can view the action logs [here](${this.input.githubWorkflowRunUrl}).\nWorkspace is available at: ${workspaceUrl}`,
     });
   }
 }
