@@ -1,11 +1,11 @@
 # Start Coder Workspace GitHub Action
 
-This GitHub Action starts a [Coder](https://coder.com) workspace and posts status updates as comments on a GitHub issue. It's designed to be used as part of a workflow triggered by events you configure.
+This GitHub Action starts a [Coder](https://coder.com) workspace and posts a status comment on a GitHub issue that gets updated with progress. It's designed to be used as part of a workflow triggered by events you configure.
 
 ## Features
 
 - Starts a Coder workspace using your specified template
-- Posts status comments on a GitHub issue
+- Posts a single status comment on a GitHub issue that updates with progress
 - Configurable workspace parameters
 - Maps GitHub users to Coder users
 
@@ -63,7 +63,7 @@ jobs:
 | Input                 | Description                                                                                             | Required | Default               |
 | --------------------- | ------------------------------------------------------------------------------------------------------- | -------- | --------------------- |
 | `github-token`        | GitHub token for posting comments                                                                       | No       | `${{ github.token }}` |
-| `github-issue-number` | GitHub issue number where comments will be posted                                                       | Yes      | -                     |
+| `github-issue-number` | GitHub issue number where the status comment will be posted                                             | Yes      | -                     |
 | `github-username`     | GitHub username of the user for whom the workspace is being started                                     | No       | -                     |
 | `coder-username`      | Coder username to override default user mapping (only set one of `github-username` or `coder-username`) | No       | -                     |
 | `coder-url`           | Coder deployment URL                                                                                    | Yes      | -                     |
@@ -74,11 +74,11 @@ jobs:
 
 ## How It Works
 
-1. The action posts an initial comment on the GitHub issue
+1. The action posts an initial status comment on the GitHub issue
 2. If `github-username` is set, it looks up the Coder user that matches the GitHub user. The Coder user must've either logged into Coder or connected external auth using the same GitHub account. If `coder-username` is set, it uses that Coder user instead.
 3. It starts a Coder workspace using the specified template and parameters
-4. If successful, it updates the comment with the workspace URL
-5. If it fails, it updates the comment with an error message
+4. If successful, it updates the same comment with the workspace URL
+5. If it fails, it updates the same comment with an error message
 
 ## Requirements
 

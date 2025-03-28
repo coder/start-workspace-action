@@ -1,12 +1,12 @@
 name: 'Start Coder Workspace'
-description: 'Starts a Coder workspace and posts status updates as comments on a GitHub issue.'
+description: 'Starts a Coder workspace and posts a status comment on a GitHub issue that updates with progress.'
 inputs:
   github-token:
-    description: 'GitHub token for posting comments'
+    description: 'GitHub token for posting the status comment'
     required: false
     default: ${{ github.token }}
   github-issue-number:
-    description: 'GitHub issue number where comments will be posted'
+    description: 'GitHub issue number where the status comment will be posted'
     required: true
   github-username:
     description: 'GitHub username of the user for whom the workspace is being started'
