@@ -1,5 +1,5 @@
 name: 'Start Coder Workspace'
-description: 'Responds to issues and comments containing @coder and starts a Coder workspace'
+description: 'Starts a Coder workspace. Posts a comment to a GitHub issue with the workspace URL.'
 inputs:
   github-token:
     description: 'GitHub token'
