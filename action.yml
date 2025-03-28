@@ -3,7 +3,7 @@ description: 'Starts a Coder workspace. Posts a comment to a GitHub issue with t
 inputs:
   github-token:
     description: 'GitHub token'
-    required: true
+    required: false
     default: ${{ github.token }}
   github-issue-number:
     description: 'GitHub issue number where progress updates will be posted'
