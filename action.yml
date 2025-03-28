@@ -6,8 +6,8 @@ inputs:
     required: false
     default: ${{ github.token }}
   github-issue-number:
-    description: 'GitHub issue number where the status comment will be posted'
-    required: true
+    description: 'GitHub issue number where the status comment will be posted (defaults to current issue context)'
+    required: false
   github-username:
     description: 'GitHub username of the user for whom the workspace is being started'
     required: false
@@ -24,8 +24,8 @@ inputs:
     description: 'Name of the Coder template to use'
     required: true
   workspace-name:
-    description: 'Name for the new workspace'
-    required: true
+    description: 'Name for the new workspace (defaults to issue-{issue_number})'
+    required: false
   parameters:
     description: 'YAML-formatted parameters for the Coder workspace'
     required: true
@@ -39,7 +39,11 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const issueNumber = Number('${{ inputs.github-issue-number }}');
+          const issueNumber = '${{ inputs.github-issue-number }}' ? Number('${{ inputs.github-issue-number }}') : github.context.issue.number;
+          if (!issueNumber) {
+            core.setFailed('No issue number provided and no issue context available');
+            return;
+          }
           const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
           const comment = await github.rest.issues.createComment({
             owner: context.repo.owner,
@@ -51,6 +55,7 @@ runs:
           core.setOutput('run_url', runUrl);
           core.setOutput('repo_owner', context.repo.owner);
           core.setOutput('repo_name', context.repo.repo);
+          core.setOutput('issue_number', issueNumber);
 
     - name: Start workspace
       shell: bash
@@ -59,7 +64,8 @@ runs:
         CODER_USERNAME: ${{ inputs.coder-username }}
         CODER_URL: ${{ inputs.coder-url }}
         CODER_TOKEN: ${{ inputs.coder-token }}
-        WORKSPACE_NAME: ${{ inputs.workspace-name }}
+        WORKSPACE_NAME: ${{ inputs.workspace-name || format('issue-{0}', steps.initial-comment.outputs.issue_number) }}
+        GITHUB_ISSUE_NUMBER: ${{ steps.initial-comment.outputs.issue_number }}
         GITHUB_STATUS_COMMENT_ID: ${{ steps.initial-comment.outputs.comment_id }}
         GITHUB_REPO_OWNER: ${{ steps.initial-comment.outputs.repo_owner }}
         GITHUB_REPO_NAME: ${{ steps.initial-comment.outputs.repo_name }}
@@ -76,6 +82,10 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
+          if (!steps.initial-comment.outputs.comment_id) {
+            core.warning('No comment ID found, skipping status update');
+            return;
+          }
           const commentId = Number('${{ steps.initial-comment.outputs.comment_id }}');
           const runUrl = '${{ steps.initial-comment.outputs.run_url }}';
           const errorMsg = process.env["ERROR_MSG"];
