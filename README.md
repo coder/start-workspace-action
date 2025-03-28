@@ -43,7 +43,6 @@ jobs:
         uses: coder/start-workspace-action@v0.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-issue-number: ${{ github.event.issue.number }}
           github-username: >-
             ${{
               (github.event_name == 'issue_comment' && github.event.comment.user.login) || 
@@ -52,7 +51,6 @@ jobs:
           coder-url: ${{ secrets.CODER_URL }}
           coder-token: ${{ secrets.CODER_TOKEN }}
           template-name: ${{ secrets.CODER_TEMPLATE_NAME }}
-          workspace-name: issue-${{ github.event.issue.number }}
           parameters: |-
             Coder Image: codercom/oss-dogfood:latest
             Coder Repository Base Directory: "~"
@@ -62,17 +60,17 @@ jobs:
 
 ## Inputs
 
-| Input                 | Description                                                                                             | Required | Default               |
-| --------------------- | ------------------------------------------------------------------------------------------------------- | -------- | --------------------- |
-| `github-token`        | GitHub token for posting comments                                                                       | No       | `${{ github.token }}` |
-| `github-issue-number` | GitHub issue number where the status comment will be posted                                             | Yes      | -                     |
-| `github-username`     | GitHub username of the user for whom the workspace is being started                                     | No       | -                     |
-| `coder-username`      | Coder username to override default user mapping (only set one of `github-username` or `coder-username`) | No       | -                     |
-| `coder-url`           | Coder deployment URL                                                                                    | Yes      | -                     |
-| `coder-token`         | API token for Coder                                                                                     | Yes      | -                     |
-| `template-name`       | Name of the Coder template to use                                                                       | Yes      | -                     |
-| `workspace-name`      | Name for the new workspace                                                                              | Yes      | -                     |
-| `parameters`          | YAML-formatted parameters for the Coder workspace                                                       | Yes      | -                     |
+| Input                 | Description                                                                                             | Required | Default                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------- | -------- | --------------------------------- |
+| `github-token`        | GitHub token for posting comments                                                                       | No       | `${{ github.token }}`             |
+| `github-issue-number` | GitHub issue number where the status comment will be posted                                             | No       | Current issue from GitHub context |
+| `github-username`     | GitHub username of the user for whom the workspace is being started                                     | No       | -                                 |
+| `coder-username`      | Coder username to override default user mapping (only set one of `github-username` or `coder-username`) | No       | -                                 |
+| `coder-url`           | Coder deployment URL                                                                                    | Yes      | -                                 |
+| `coder-token`         | API token for Coder                                                                                     | Yes      | -                                 |
+| `template-name`       | Name of the Coder template to use                                                                       | Yes      | -                                 |
+| `workspace-name`      | Name for the new workspace                                                                              | No       | `issue-{issue_number}`            |
+| `parameters`          | YAML-formatted parameters for the Coder workspace                                                       | Yes      | -                                 |
 
 ## How It Works
 
