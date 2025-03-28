@@ -51,7 +51,7 @@ export class CoderClient {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to get templates, status code: ${response.status}`
+        `Failed to get Coder templates, status code: ${response.status}`
       );
     }
 
@@ -103,7 +103,7 @@ export class CoderClient {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Failed to create workspace, status code: ${response.status}, body: ${errorText}`
+        `Failed to create Coder workspace, status code: ${response.status}, body: ${errorText}`
       );
     }
 
@@ -125,7 +125,7 @@ export class CoderClient {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Failed to get user, status code: ${response.status}, body: ${errorText}`
+        `Failed to get Coder user, status code: ${response.status}, body: ${errorText}`
       );
     }
 
@@ -155,7 +155,7 @@ export class CoderClient {
           "Only Coder 2.21 and above supports querying users by their GitHub ID";
       }
       throw new Error(
-        `${extraExplanation}\nFailed to list users by GitHub ID, status code: ${response.status}, body: ${errorText}`
+        `${extraExplanation}\nFailed to list Coder users by GitHub ID, status code: ${response.status}, body: ${errorText}`
       );
     }
 

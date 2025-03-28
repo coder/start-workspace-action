@@ -1,4 +1,4 @@
-// Source hash: 0ceb1709571d8df0b6b615a73ceabfd1601ad2c7816f5a81e36972d318e7bc95
+// Source hash: 46998a3aefe2d9f033ddcd4b4f4c88d4bd7cc25d7b153e8bd19507a5e35db5f4
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30388,7 +30388,7 @@ class CoderClient {
       headers: this.headers
     });
     if (!response.ok) {
-      throw new Error(`Failed to get templates, status code: ${response.status}`);
+      throw new Error(`Failed to get Coder templates, status code: ${response.status}`);
     }
     const data = await response.json();
     const templates = TemplatesResponseSchema.parse(data);
@@ -30421,7 +30421,7 @@ class CoderClient {
     });
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to create workspace, status code: ${response.status}, body: ${errorText}`);
+      throw new Error(`Failed to create Coder workspace, status code: ${response.status}, body: ${errorText}`);
     }
     const data = await response.json();
     const parsedData = WorkspaceResponseSchema.parse(data);
@@ -30434,7 +30434,7 @@ class CoderClient {
     });
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to get user, status code: ${response.status}, body: ${errorText}`);
+      throw new Error(`Failed to get Coder user, status code: ${response.status}, body: ${errorText}`);
     }
     const data = await response.json();
     const parsedData = UserResponseSchema.parse(data);
@@ -30452,7 +30452,7 @@ class CoderClient {
         extraExplanation = "Only Coder 2.21 and above supports querying users by their GitHub ID";
       }
       throw new Error(`${extraExplanation}
-Failed to list users by GitHub ID, status code: ${response.status}, body: ${errorText}`);
+Failed to list Coder users by GitHub ID, status code: ${response.status}, body: ${errorText}`);
     }
     const data = await response.json();
     const parsedData = UserListResponseSchema.parse(data);
