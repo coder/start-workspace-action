@@ -1,4 +1,4 @@
-// Source hash: 19ceaee5753b47a4b702e1a86f0e92985f96bae6d23e4424bfaad638a7502b1b
+// Source hash: 0ceb1709571d8df0b6b615a73ceabfd1601ad2c7816f5a81e36972d318e7bc95
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30619,7 +30619,10 @@ var main = async () => {
     templateName: "TEMPLATE_NAME",
     workspaceParameters: "WORKSPACE_PARAMETERS"
   };
-  const input = ActionInputSchema.parse(Object.fromEntries(Object.entries(inputEnv).map(([key, value]) => [key, process.env[value]])));
+  const input = ActionInputSchema.parse(Object.fromEntries(Object.entries(inputEnv).map(([key, value]) => [
+    key,
+    process.env[value] === "" ? undefined : process.env[value]
+  ])));
   const action = new StartWorkspaceAction(console, input);
   await action.execute();
 };

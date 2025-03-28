@@ -28,7 +28,10 @@ const main = async () => {
 
   const input = ActionInputSchema.parse(
     Object.fromEntries(
-      Object.entries(inputEnv).map(([key, value]) => [key, process.env[value]])
+      Object.entries(inputEnv).map(([key, value]) => [
+        key,
+        process.env[value] === "" ? undefined : process.env[value],
+      ])
     )
   );
   const action = new StartWorkspaceAction(console, input);
