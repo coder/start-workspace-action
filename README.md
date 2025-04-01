@@ -64,7 +64,7 @@ jobs:
 | --------------------- | ------------------------------------------------------------------------------------------------------- | -------- | --------------------------------- |
 | `github-token`        | GitHub token for posting comments                                                                       | No       | `${{ github.token }}`             |
 | `github-issue-number` | GitHub issue number where the status comment will be posted                                             | No       | Current issue from GitHub context |
-| `github-username`     | GitHub username of the user for whom the workspace is being started (requires Coder 2.21 or later)      | No       | -                                 |
+| `github-username`     | GitHub username of the user for whom the workspace is being started (requires Coder 2.21 or newer)      | No       | -                                 |
 | `coder-username`      | Coder username to override default user mapping (only set one of `github-username` or `coder-username`) | No       | -                                 |
 | `coder-url`           | Coder deployment URL                                                                                    | Yes      | -                                 |
 | `coder-token`         | API token for Coder                                                                                     | Yes      | -                                 |
