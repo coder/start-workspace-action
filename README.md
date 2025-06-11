@@ -58,6 +58,29 @@ jobs:
             Region: us-pittsburgh
 ```
 
+### Using Array Parameters
+
+The `parameters` input now supports arrays in YAML format. Arrays are automatically serialized to JSON strings when sent to the Coder API, which is useful when your Coder template has parameters that accept JSON-encoded arrays:
+
+```yaml
+      - name: Start Coder workspace with arrays
+        uses: coder/start-workspace-action@v0.1.0
+        with:
+          coder-url: ${{ secrets.CODER_URL }}
+          coder-token: ${{ secrets.CODER_TOKEN }}
+          template-name: multi-region-template
+          parameters: |-
+            instance_type: t3.medium
+            regions:
+              - us-east-1
+              - us-west-2
+              - eu-central-1
+            services:
+              - web
+              - api
+              - database
+```
+
 ## Inputs
 
 | Input                 | Description                                                                                             | Required | Default                           |
@@ -70,7 +93,7 @@ jobs:
 | `coder-token`         | API token for Coder                                                                                     | Yes      | -                                 |
 | `template-name`       | Name of the Coder template to use                                                                       | Yes      | -                                 |
 | `workspace-name`      | Name for the new workspace                                                                              | No       | `issue-{issue_number}`            |
-| `parameters`          | YAML-formatted parameters for the Coder workspace                                                       | Yes      | -                                 |
+| `parameters`          | YAML-formatted parameters for the Coder workspace (supports arrays)                                     | Yes      | -                                 |
 
 ## How It Works
 

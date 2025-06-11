@@ -45,7 +45,10 @@ export const ActionInputSchema = z.object({
 
 export type ActionInput = z.infer<typeof ActionInputSchema>;
 
-export const WorkspaceParametersSchema = z.record(z.string(), z.string());
+export const WorkspaceParametersSchema = z.record(
+  z.string(),
+  z.union([z.string(), z.array(z.string())])
+);
 
 export type WorkspaceParameters = z.infer<typeof WorkspaceParametersSchema>;
 
@@ -81,7 +84,9 @@ export class StartWorkspaceAction {
       );
     }
     const username = users[0];
-    assert(username, "Coder username not found in output");
+    if (!username) {
+      throw new Error("Coder username not found in output");
+    }
     return username;
   }
 

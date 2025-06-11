@@ -140,6 +140,26 @@ describe("StartWorkspaceAction", () => {
     });
   });
 
+  it("parseParameters with arrays", async () => {
+    const action = newAction();
+    const parameters = dedent`
+      key: value
+      regions:
+        - us-east-1
+        - us-west-2
+        - eu-central-1
+      services:
+        - web
+        - api
+    `.trim();
+    const parsed = await action.parseParameters(parameters);
+    expect(parsed).toEqual({
+      key: "value",
+      regions: ["us-east-1", "us-west-2", "eu-central-1"],
+      services: ["web", "api"],
+    });
+  });
+
   describe("execute", () => {
     type MockForExecuteResult = {
       workspaceStarted: boolean;

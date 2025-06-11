@@ -77,13 +77,13 @@ export class CoderClient {
     ownerID: string;
     templateID: string;
     workspaceName: string;
-    parameters: Record<string, string>;
+    parameters: Record<string, string | string[]>;
   }): Promise<string> {
     const { ownerID, templateID, workspaceName, parameters } = args;
     const paramArray = Object.entries(parameters).map(([key, value]) => {
       return {
         name: key,
-        value,
+        value: Array.isArray(value) ? JSON.stringify(value) : value,
       };
     });
     const response = await fetch(
