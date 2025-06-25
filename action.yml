@@ -5,6 +5,10 @@ inputs:
     description: 'GitHub token for posting the status comment'
     required: false
     default: ${{ github.token }}
+  github-url:
+    description: 'GitHub URL to be used for running an action'
+    required: false
+    default: 'https://github.com'
   github-issue-number:
     description: 'GitHub issue number where the status comment will be posted (defaults to current issue context)'
     required: false
@@ -44,7 +48,7 @@ runs:
             core.setFailed('No issue number provided and no issue context available');
             return;
           }
-          const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const runUrl = `${{ inputs.github-url }}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
           const comment = await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
