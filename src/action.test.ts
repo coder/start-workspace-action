@@ -3,7 +3,6 @@ import {
   StartWorkspaceAction,
   UserFacingError,
   type ActionInput,
-  type ExecOutput,
   type Logger,
 } from "./action";
 import dedent from "dedent";
@@ -31,30 +30,6 @@ interface ActionParams {
 }
 
 const newAction = (params?: ActionParams) => {
-  const defaults: ActionInput = {
-    githubUsername: "github-user",
-    coderUsername: "coder-user",
-    coderUrl: "https://example.com",
-    coderToken: "coder-token",
-    workspaceName: "workspace-name",
-    githubStatusCommentId: 123,
-    githubRepoOwner: "github-repo-owner",
-    githubRepoName: "github-repo-name",
-    githubToken: "github-token",
-    githubWorkflowRunUrl: "https://github.com/workflow-run",
-    templateName: "ubuntu",
-    workspaceParameters: dedent`
-      key: value
-      key2: value2
-      key3: value3
-    `.trim(),
-  };
-  // Loop through the input rather than use {...defaults, ...(params?.input ?? {})}
-  // to also allow overriding defaults with undefined values
-  for (const [key, value] of Object.entries(params?.input ?? {})) {
-    (defaults as any)[key] = value;
-  }
-
   const action = new StartWorkspaceAction(params?.logger ?? new TestLogger(), {
     githubUsername: "github-user",
     coderUsername: undefined,
@@ -72,21 +47,11 @@ const newAction = (params?: ActionParams) => {
         key2: value2
         key3: value3
       `.trim(),
+    githubUrl: "https://github.com",
     ...(params?.input ?? {}),
   });
 
   return action;
-};
-
-const identityExec = async (
-  strings: TemplateStringsArray,
-  ...args: unknown[]
-): Promise<ExecOutput> => {
-  let result = strings[0];
-  for (let i = 0; i < args.length; i++) {
-    result += String(args[i]) + strings[i + 1];
-  }
-  return { text: () => result ?? "" };
 };
 
 describe("StartWorkspaceAction", () => {
