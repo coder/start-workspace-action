@@ -41,6 +41,7 @@ export const ActionInputSchema = z.object({
   githubWorkflowRunUrl: z.string().min(1),
   templateName: z.string().min(1),
   workspaceParameters: z.string().min(1),
+  githubUrl: z.string().min(1),
 });
 
 export type ActionInput = z.infer<typeof ActionInputSchema>;
@@ -56,7 +57,10 @@ export class StartWorkspaceAction {
     private readonly logger: Logger,
     private readonly input: ActionInput
   ) {
-    this.octokit = new Octokit({ auth: input.githubToken });
+    this.octokit = new Octokit({
+      auth: input.githubToken,
+      baseUrl: input.githubUrl,
+    });
     this.coder = new CoderClient(input.coderUrl, input.coderToken);
   }
 

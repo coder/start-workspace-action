@@ -112,6 +112,10 @@ jobs:
 
 This ensures the Coder API token is only accessible to workflows running on approved branches.
 
+## GitHub Enterprise Support
+
+This action supports GitHub Enterprise with the exception of the `github-username` input. You can use the `coder-username` input instead.
+
 ## License
 
 [MIT](LICENSE)

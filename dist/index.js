@@ -1,4 +1,4 @@
-// Source hash: 502e316a739f1716d693e20b5f00db3e1fec499dd7ae21b8777097eb429691e8
+// Source hash: 67ce94766a35d0d05fa9b4d38675d2f4deff7b82278c094b42d55ed2dfba6572
 import { createRequire } from "node:module";
 var __create = Object.create;
 var __getProtoOf = Object.getPrototypeOf;
@@ -30481,7 +30481,8 @@ var ActionInputSchema = z.object({
   githubToken: z.string().min(1),
   githubWorkflowRunUrl: z.string().min(1),
   templateName: z.string().min(1),
-  workspaceParameters: z.string().min(1)
+  workspaceParameters: z.string().min(1),
+  githubUrl: z.string().min(1)
 });
 var WorkspaceParametersSchema = z.record(z.string(), z.string());
 
@@ -30493,7 +30494,10 @@ class StartWorkspaceAction {
   constructor(logger, input) {
     this.logger = logger;
     this.input = input;
-    this.octokit = new Octokit2({ auth: input.githubToken });
+    this.octokit = new Octokit2({
+      auth: input.githubToken,
+      baseUrl: input.githubUrl
+    });
     this.coder = new CoderClient(input.coderUrl, input.coderToken);
   }
   async coderUsernameByGitHubId(githubUserId) {
@@ -30625,7 +30629,8 @@ var main = async () => {
     githubToken: "GITHUB_TOKEN",
     githubWorkflowRunUrl: "GITHUB_WORKFLOW_RUN_URL",
     templateName: "TEMPLATE_NAME",
-    workspaceParameters: "WORKSPACE_PARAMETERS"
+    workspaceParameters: "WORKSPACE_PARAMETERS",
+    githubUrl: "GITHUB_URL"
   };
   const input = ActionInputSchema.parse(Object.fromEntries(Object.entries(inputEnv).map(([key, value]) => [
     key,

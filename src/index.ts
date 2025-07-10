@@ -24,6 +24,7 @@ const main = async () => {
     githubWorkflowRunUrl: "GITHUB_WORKFLOW_RUN_URL",
     templateName: "TEMPLATE_NAME",
     workspaceParameters: "WORKSPACE_PARAMETERS",
+    githubUrl: "GITHUB_URL",
   };
 
   const input = ActionInputSchema.parse(
