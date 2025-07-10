@@ -5,10 +5,6 @@ inputs:
     description: 'GitHub token for posting the status comment'
     required: false
     default: ${{ github.token }}
-  github-url:
-    description: 'URL of the GitHub instance to use'
-    required: false
-    default: 'https://github.com'
   github-issue-number:
     description: 'GitHub issue number where the status comment will be posted (defaults to current issue context)'
     required: false
@@ -43,14 +39,13 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const rawGithubUrl = '${{ inputs.github-url }}';
-          const githubUrl = rawGithubUrl.endsWith("/") ? rawGithubUrl.slice(0, -1) : rawGithubUrl;
           const issueNumber = '${{ inputs.github-issue-number }}' ? Number('${{ inputs.github-issue-number }}') : context.issue.number;
           if (!issueNumber) {
             core.setFailed('No issue number provided and no issue context available');
             return;
           }
-          const runUrl = `${githubUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const serverUrl = '${{ github.server_url }}';
+          const runUrl = `${serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
           const comment = await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -62,7 +57,7 @@ runs:
           core.setOutput('repo_owner', context.repo.owner);
           core.setOutput('repo_name', context.repo.repo);
           core.setOutput('issue_number', issueNumber);
-          core.setOutput('github_url', github.request.endpoint.DEFAULTS.baseUrl);
+          core.setOutput('github_url', '${{ github.api_url }}');
 
     - name: Start workspace
       shell: bash
