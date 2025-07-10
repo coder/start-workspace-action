@@ -50,7 +50,7 @@ runs:
             core.setFailed('No issue number provided and no issue context available');
             return;
           }
-          const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const runUrl = `${githubUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
           const comment = await github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -62,7 +62,7 @@ runs:
           core.setOutput('repo_owner', context.repo.owner);
           core.setOutput('repo_name', context.repo.repo);
           core.setOutput('issue_number', issueNumber);
-          core.setOutput('github_url', githubUrl);
+          core.setOutput('github_url', github.request.endpoint.DEFAULTS.baseUrl);
 
     - name: Start workspace
       shell: bash
