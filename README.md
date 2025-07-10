@@ -63,7 +63,6 @@ jobs:
 | Input                 | Description                                                                                             | Required | Default                           |
 | --------------------- | ------------------------------------------------------------------------------------------------------- | -------- | --------------------------------- |
 | `github-token`        | GitHub token for posting comments                                                                       | No       | `${{ github.token }}`             |
-| `github-url`          | URL of the GitHub instance to use                                                                       | No       | `https://github.com`              |
 | `github-issue-number` | GitHub issue number where the status comment will be posted                                             | No       | Current issue from GitHub context |
 | `github-username`     | GitHub username of the user for whom the workspace is being started (requires Coder 2.21 or newer)      | No       | -                                 |
 | `coder-username`      | Coder username to override default user mapping (only set one of `github-username` or `coder-username`) | No       | -                                 |
