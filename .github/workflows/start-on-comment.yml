@@ -1,0 +1,50 @@
+name: Start Workspace on Issue or Comment
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  start-workspace:
+    # Only run when:
+    # - a new comment contains "@coder" (and commenter is trusted), or
+    # - a new issue body contains "@coder"
+    if: >
+      (github.event_name == 'issue_comment' &&
+       contains(github.event.comment.body, '@coder') &&
+       github.event.issue.state == 'open' &&
+       (github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'COLLABORATOR')) ||
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.body, '@coder') &&
+       github.event.issue.state == 'open')
+    runs-on: ubuntu-latest
+    environment: start-ai-workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start Coder workspace
+        uses: ./
+        with:
+          # optional, defaults to GITHUB_TOKEN, included for clarity
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-username: >-
+            ${{
+              (github.event_name == 'issue_comment' && github.event.comment.user.login) ||
+              (github.event_name == 'issues' && github.event.issue.user.login)
+            }}
+          coder-url: ${{ secrets.CODER_URL }}
+          coder-token: ${{ secrets.CODER_TOKEN }}
+          template-name: ${{ secrets.CODER_TEMPLATE_NAME }}
+          parameters: |-
+            Coder Image: codercom/oss-dogfood:latest
+            Coder Repository Base Directory: "~"
+            AI Code Prompt: "Use the gh CLI to read issue https://github.com/${{ github.repository }}/issues/${{ github.event.issue.number }} and address it."
+            Region: us-pittsburgh
