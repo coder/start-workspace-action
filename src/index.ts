@@ -24,6 +24,7 @@ const main = async () => {
     githubWorkflowRunUrl: "GITHUB_WORKFLOW_RUN_URL",
     templateName: "TEMPLATE_NAME",
     workspaceParameters: "WORKSPACE_PARAMETERS",
+    preset: "PRESET",
     githubUrl: "GITHUB_URL",
   };
 

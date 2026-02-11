@@ -70,7 +70,8 @@ jobs:
 | `coder-token`         | API token for Coder                                                                                     | Yes      | -                                 |
 | `template-name`       | Name of the Coder template to use                                                                       | Yes      | -                                 |
 | `workspace-name`      | Name for the new workspace                                                                              | No       | `issue-{issue_number}`            |
-| `parameters`          | YAML-formatted parameters for the Coder workspace                                                       | Yes      | -                                 |
+| `parameters`          | YAML-formatted parameters for the Coder workspace (at least one of `parameters` or `preset` required)   | No       | -                                 |
+| `preset`              | Name of a template preset to use for workspace creation (at least one of `parameters` or `preset` required) | No    | -                                 |
 
 ## How It Works
 

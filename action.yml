@@ -27,8 +27,11 @@ inputs:
     description: 'Name for the new workspace (defaults to issue-{issue_number})'
     required: false
   parameters:
-    description: 'YAML-formatted parameters for the Coder workspace'
-    required: true
+    description: 'YAML-formatted parameters for the Coder workspace (at least one of parameters or preset is required)'
+    required: false
+  preset:
+    description: 'Name of a template preset to use for workspace creation (at least one of parameters or preset is required)'
+    required: false
 
 runs:
   using: 'composite'
@@ -74,6 +77,7 @@ runs:
         GITHUB_WORKFLOW_RUN_URL: ${{ steps.initial-comment.outputs.run_url }}
         TEMPLATE_NAME: ${{ inputs.template-name }}
         WORKSPACE_PARAMETERS: ${{ inputs.parameters }}
+        PRESET: ${{ inputs.preset }}
         GITHUB_URL: ${{ github.api_url }}
       run: |
         node "${{ github.action_path }}/dist/index.js"

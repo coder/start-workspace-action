@@ -13,6 +13,13 @@ const WorkspaceResponseSchema = z.object({
   id: z.string(),
 });
 
+const PresetSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+const PresetsResponseSchema = z.array(PresetSchema);
+
 const UserResponseSchema = z.object({
   id: z.string(),
 });
@@ -70,6 +77,30 @@ export class CoderClient {
   }
 
   /**
+   * Gets available presets for a template version
+   */
+  async getPresets(
+    templateVersionId: string
+  ): Promise<{ id: string; name: string }[]> {
+    const response = await fetch(
+      `${this.serverURL}/api/v2/templateversions/${templateVersionId}/presets`,
+      {
+        method: "GET",
+        headers: this.headers,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to get template presets, status code: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return PresetsResponseSchema.parse(data);
+  }
+
+  /**
    * Creates a new workspace with the specified parameters
    * Returns the ID of the created workspace
    */
@@ -77,26 +108,32 @@ export class CoderClient {
     ownerID: string;
     templateID: string;
     workspaceName: string;
-    parameters: Record<string, string>;
+    parameters?: Record<string, string>;
+    presetID?: string;
   }): Promise<string> {
-    const { ownerID, templateID, workspaceName, parameters } = args;
-    const paramArray = Object.entries(parameters).map(([key, value]) => {
-      return {
-        name: key,
-        value,
-      };
-    });
+    const { ownerID, templateID, workspaceName, parameters, presetID } = args;
+    const body: Record<string, unknown> = {
+      template_id: templateID,
+      name: workspaceName,
+      autostart: true,
+    };
+    if (parameters && Object.keys(parameters).length > 0) {
+      body.rich_parameter_values = Object.entries(parameters).map(
+        ([key, value]) => ({
+          name: key,
+          value,
+        })
+      );
+    }
+    if (presetID) {
+      body.template_version_preset_id = presetID;
+    }
     const response = await fetch(
       `${this.serverURL}/api/v2/users/${ownerID}/workspaces`,
       {
         method: "POST",
         headers: this.headers,
-        body: JSON.stringify({
-          template_id: templateID,
-          name: workspaceName,
-          autostart: true,
-          rich_parameter_values: paramArray,
-        }),
+        body: JSON.stringify(body),
       }
     );
 
