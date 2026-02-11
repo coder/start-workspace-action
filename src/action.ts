@@ -40,7 +40,8 @@ export const ActionInputSchema = z.object({
   githubToken: z.string().min(1),
   githubWorkflowRunUrl: z.string().min(1),
   templateName: z.string().min(1),
-  workspaceParameters: z.string().min(1),
+  workspaceParameters: z.string().min(1).optional(),
+  preset: z.string().min(1).optional(),
   githubUrl: z.string().min(1),
 });
 
@@ -103,22 +104,41 @@ export class StartWorkspaceAction {
     templateName,
     workspaceName,
     parameters,
+    preset,
   }: {
     coderUsername: string;
     templateName: string;
     workspaceName: string;
-    parameters: WorkspaceParameters;
+    parameters?: WorkspaceParameters;
+    preset?: string;
   }): Promise<void> {
     this.logger.log("Getting user ID");
     const coderUserId = await this.coder.getUserID(coderUsername);
     this.logger.log("Getting template info");
-    const { templateId } = await this.coder.getTemplateInfo(templateName);
+    const { templateId, templateVersionId } =
+      await this.coder.getTemplateInfo(templateName);
+
+    let presetID: string | undefined;
+    if (preset) {
+      this.logger.log(`Looking up preset "${preset}"`);
+      const presets = await this.coder.getPresets(templateVersionId);
+      const found = presets.find((p) => p.name === preset);
+      if (!found) {
+        const available = presets.map((p) => p.name).join(", ");
+        throw new UserFacingError(
+          `Preset "${preset}" not found. Available presets: ${available}`
+        );
+      }
+      presetID = found.id;
+    }
+
     this.logger.log("Creating workspace");
     await this.coder.createWorkspace({
       ownerID: coderUserId,
       templateID: templateId,
       workspaceName,
       parameters,
+      presetID,
     });
     this.logger.log("Workspace created");
   }
@@ -168,9 +188,14 @@ export class StartWorkspaceAction {
         "Only one of GitHub username or Coder username may be set"
       );
     }
-    const parameters = await this.parseParameters(
-      this.input.workspaceParameters
-    );
+    if (!this.input.workspaceParameters && !this.input.preset) {
+      throw new Error(
+        "At least one of 'parameters' or 'preset' must be provided"
+      );
+    }
+    const parameters = this.input.workspaceParameters
+      ? await this.parseParameters(this.input.workspaceParameters)
+      : undefined;
     let coderUsername = this.input.coderUsername ?? "";
     if (coderUsername === "") {
       assert(this.input.githubUsername, "GitHub username is required");
@@ -214,6 +239,7 @@ export class StartWorkspaceAction {
       templateName: this.input.templateName,
       workspaceName: this.input.workspaceName,
       parameters,
+      preset: this.input.preset,
     });
     await this.githubUpdateIssueComment({
       owner: this.input.githubRepoOwner,

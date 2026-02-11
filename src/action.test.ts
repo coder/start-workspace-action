@@ -47,6 +47,7 @@ const newAction = (params?: ActionParams) => {
         key2: value2
         key3: value3
       `.trim(),
+    preset: undefined,
     githubUrl: "https://github.com",
     ...(params?.input ?? {}),
   });
@@ -270,6 +271,152 @@ describe("StartWorkspaceAction", () => {
       expect(mock.error).toBeInstanceOf(UserFacingError);
       expect((mock.error as any).message).toEqual(
         `Multiple Coder users found for GitHub user hugo: hugo, alice, bob, and others. Please connect other users to other GitHub accounts and try again.`
+      );
+    });
+
+    it("preset only", async () => {
+      const mock = await executeTest(
+        {
+          input: {
+            preset: "my-preset",
+            workspaceParameters: undefined,
+          },
+        },
+        {
+          coderUsernamesByGitHubId: ["hugo"],
+          initialIssueComment: "Initial comment",
+          githubUserId: 123,
+        },
+        {
+          issueComments: [
+            "Initial comment",
+            "Initial comment\n\nWorkspace will be available at: https://example.com/hugo/workspace-name",
+            "✅ Coder workspace started! You can view the action logs [here](https://github.com/workflow-run).\n\nWorkspace is available at: https://example.com/hugo/workspace-name",
+          ],
+          workspaceStarted: true,
+          startWorkspace: {
+            coderUsername: "hugo",
+            templateName: "ubuntu",
+            workspaceName: "workspace-name",
+          },
+        }
+      );
+      expect(mock.startWorkspaceArgs?.preset).toBe("my-preset");
+      expect(mock.startWorkspaceArgs?.parameters).toBeUndefined();
+    });
+
+    it("preset and parameters", async () => {
+      const mock = await executeTest(
+        {
+          input: {
+            preset: "my-preset",
+          },
+        },
+        {
+          coderUsernamesByGitHubId: ["hugo"],
+          initialIssueComment: "Initial comment",
+          githubUserId: 123,
+        },
+        {
+          issueComments: [
+            "Initial comment",
+            "Initial comment\n\nWorkspace will be available at: https://example.com/hugo/workspace-name",
+            "✅ Coder workspace started! You can view the action logs [here](https://github.com/workflow-run).\n\nWorkspace is available at: https://example.com/hugo/workspace-name",
+          ],
+          workspaceStarted: true,
+          startWorkspace: {
+            coderUsername: "hugo",
+            templateName: "ubuntu",
+            workspaceName: "workspace-name",
+          },
+        }
+      );
+      expect(mock.startWorkspaceArgs?.preset).toBe("my-preset");
+      expect(mock.startWorkspaceArgs?.parameters).toEqual({
+        key: "value",
+        key2: "value2",
+        key3: "value3",
+      });
+    });
+
+    it("neither preset nor parameters throws error", async () => {
+      const action = newAction({
+        input: {
+          preset: undefined,
+          workspaceParameters: undefined,
+        },
+      });
+      const mock = mockForExecute(action, {
+        coderUsernamesByGitHubId: ["hugo"],
+        initialIssueComment: "Initial comment",
+        githubUserId: 123,
+      });
+      try {
+        await action.execute();
+      } catch (error) {
+        mock.error = error;
+      }
+      expect(mock.error).toBeInstanceOf(Error);
+      expect((mock.error as any).message).toEqual(
+        "At least one of 'parameters' or 'preset' must be provided"
+      );
+    });
+  });
+
+  describe("coderStartWorkspace", () => {
+    it("resolves preset and passes presetID to createWorkspace", async () => {
+      const action = newAction();
+      const createWorkspaceCalls: any[] = [];
+
+      action["coder"].getUserID = async () => "user-id-123";
+      action["coder"].getTemplateInfo = async () => ({
+        templateId: "tmpl-id",
+        templateVersionId: "tmpl-ver-id",
+      });
+      action["coder"].getPresets = async () => [
+        { id: "preset-id-1", name: "dev" },
+        { id: "preset-id-2", name: "prod" },
+      ];
+      action["coder"].createWorkspace = async (args) => {
+        createWorkspaceCalls.push(args);
+        return "ws-id";
+      };
+
+      await action.coderStartWorkspace({
+        coderUsername: "hugo",
+        templateName: "ubuntu",
+        workspaceName: "my-ws",
+        preset: "prod",
+      });
+
+      expect(createWorkspaceCalls).toHaveLength(1);
+      expect(createWorkspaceCalls[0].presetID).toBe("preset-id-2");
+    });
+
+    it("throws UserFacingError when preset not found", async () => {
+      const action = newAction();
+
+      action["coder"].getUserID = async () => "user-id-123";
+      action["coder"].getTemplateInfo = async () => ({
+        templateId: "tmpl-id",
+        templateVersionId: "tmpl-ver-id",
+      });
+      action["coder"].getPresets = async () => [
+        { id: "preset-id-1", name: "dev" },
+        { id: "preset-id-2", name: "prod" },
+      ];
+
+      expect(
+        action.coderStartWorkspace({
+          coderUsername: "hugo",
+          templateName: "ubuntu",
+          workspaceName: "my-ws",
+          preset: "staging",
+        })
+      ).rejects.toThrow(
+        new UserFacingError(
+          'Preset "staging" not found. Available presets: dev, prod'
+        )
       );
     });
   });
